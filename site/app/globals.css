@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: #080b0f;
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: rgba(0,194,255,0.25); color: #fff; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #080b0f; }
+  ::-webkit-scrollbar-thumb { background: #1e2733; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2a3545; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-background font-semibold text-sm rounded-lg hover:bg-accent-dim transition-all duration-200 shadow-glow-sm hover:shadow-glow;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-surface-2 text-primary font-medium text-sm rounded-lg border border-border hover:border-border-bright transition-all duration-200;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-secondary text-sm rounded-lg hover:text-primary hover:bg-surface-2 transition-all duration-200;
+  }
+  .card {
+    @apply bg-surface rounded-xl border border-border p-6 hover:border-border-bright transition-all duration-200;
+  }
+  .card-glow {
+    @apply card hover:shadow-glow-sm hover:border-accent/20;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-accent { @apply badge bg-accent/10 text-accent border border-accent/20; }
+  .badge-success { @apply badge bg-success/10 text-success border border-success/20; }
+  .badge-warning { @apply badge bg-warning/10 text-warning border border-warning/20; }
+  .badge-muted { @apply badge bg-surface-2 text-secondary border border-border; }
+  .input {
+    @apply w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-primary placeholder:text-muted text-sm focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all duration-200;
+  }
+  .section-title {
+    @apply text-2xl font-bold text-primary tracking-tight;
+  }
+  .section-subtitle {
+    @apply text-secondary text-sm mt-1;
+  }
+  .live-dot {
+    @apply relative flex h-2 w-2;
+  }
+  .live-dot::before {
+    @apply content-[''] absolute inline-flex h-full w-full rounded-full bg-success opacity-75 animate-ping;
+  }
+  .live-dot::after {
+    @apply content-[''] relative inline-flex rounded-full h-2 w-2 bg-success;
+  }
+}

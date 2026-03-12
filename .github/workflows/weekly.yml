@@ -1,0 +1,115 @@
+name: Weekly Automation
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Monday 7am UTC — performance report
+    - cron: '0 8 * * 2'   # Tuesday 8am UTC — newsletter
+    - cron: '0 3 * * 0'   # Sunday 3am UTC — rankings update
+    - cron: '0 9 * * 3'   # Wednesday 9am UTC — goal check-ins
+    - cron: '0 10 * * 4'  # Thursday 10am UTC — referral rewards
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'Which job to run manually'
+        required: false
+        default: 'all'
+        type: choice
+        options: ['all', 'report', 'newsletter', 'rankings', 'goal-checkins', 'referrals']
+
+jobs:
+  weekly-report:
+    name: Weekly Performance Report (Mon 7am)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 7 * * 1'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Send performance report
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+        run: python automations/reports/weekly_report.py
+
+  send-newsletter:
+    name: Weekly Newsletter (Tue 8am)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 8 * * 2'
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Send weekly newsletter
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_FREE_LIST_ID: ${{ secrets.BREVO_FREE_LIST_ID }}
+          BREVO_LIFETIME_LIST_ID: ${{ secrets.BREVO_LIFETIME_LIST_ID }}
+        run: python automations/email/send_newsletter.py
+
+  update-rankings:
+    name: Rankings Update (Sun 3am)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * 0'
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Update tool & LLM rankings
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python automations/rankings/update_rankings.py
+
+  goal-checkins:
+    name: Goal Check-ins (Wed 9am)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 * * 3'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Send goal check-ins
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+        run: python automations/email/send_goal_checkins.py
+
+  check-referrals:
+    name: Referral Rewards (Thu 10am)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 10 * * 4'
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Check and award referral milestones
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+        run: python automations/referrals/check_referrals.py

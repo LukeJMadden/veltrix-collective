@@ -1,0 +1,24 @@
+name: Monthly Automation
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'   # 1st of every month, 3am UTC
+  workflow_dispatch:
+
+jobs:
+  seo-refresh:
+    name: SEO Content Refresh & Comparison Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: 'pip', cache-dependency-path: automations/requirements.txt }
+      - run: pip install -r automations/requirements.txt
+      - name: Refresh low-traffic posts + build comparison pages
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python automations/seo/update_content.py
