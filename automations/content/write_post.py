@@ -1,8 +1,7 @@
 """
 Writer - Agent 2 for Veltrix Collective
-Pulls top-scoring news from Supabase, picks the best topic,
-generates a full SEO blog post in Veltix voice using OpenAI (gpt-4o),
-saves as a draft to the posts table, and logs the run.
+Pulls top-scoring news from Supabase, generates a full SEO blog post in Veltix
+voice using OpenAI gpt-4o, saves as draft to posts table, logs the run.
 Triggered daily at 2am UTC via GitHub Actions.
 """
 
@@ -81,6 +80,7 @@ def make_slug(title):
     return re.sub(r"-+", "-", slug)[:80]
 
 
+# Note: JSON block uses {{ and }} to escape braces in Python .format() strings
 WRITER_PROMPT = """You are Veltix, the AI persona behind Veltrix Collective (veltrixcollective.com).
 
 Write a complete SEO blog post about this AI news story.
@@ -92,37 +92,39 @@ Source URL: {source_url}
 
 Requirements:
 - ~{word_count} words
-- First person plural voice. "we track", "we tested", "our rankings".
-- Slightly irreverent. Never corporate. Never hype. Specific about what matters and why.
+- First person plural. "we track", "we tested", "our rankings".
+- Slightly irreverent. Never corporate. Specific about what matters and why.
 - Weave in "you need AI to keep up with AI" naturally at least once
 - Structure: hook intro -> what happened -> why it matters -> what to do -> CTA
 - CTA links to veltrixcollective.com/tools or veltrixcollective.com/insider
 - 2-3 H2 headings using ## markdown
-- Analyse and add perspective — do NOT reproduce the source article
+- Analyse and add perspective. Do NOT reproduce the source article verbatim.
 
-Append this JSON block at the very end:
+Append this JSON block at the very end of your response:
 ```json
-{
+{{
   "title": "SEO title 60 chars max",
   "excerpt": "2-sentence preview 150 chars max",
   "meta_title": "Meta title 60 chars max",
   "meta_description": "Meta description 155 chars max",
   "tags": ["tag1", "tag2", "tag3"],
   "category": "ai-tools OR llm-news OR industry OR automation OR research"
-}
+}}
 ```"""
 
 
 def generate_post(topic):
     log.info(f"Generating post for: {topic['headline'][:70]}")
-    raw = call_ai(
-        WRITER_PROMPT.format(
-            headline=topic["headline"], source_name=topic["source_name"],
-            summary=topic.get("summary", ""), source_url=topic["source_url"],
-            word_count=TARGET_WORD_COUNT,
-        ),
-        max_tokens=2500, quality=True,
+    prompt = WRITER_PROMPT.format(
+        headline=topic["headline"],
+        source_name=topic["source_name"],
+        summary=topic.get("summary", ""),
+        source_url=topic["source_url"],
+        word_count=TARGET_WORD_COUNT,
     )
+    raw = call_ai(prompt, max_tokens=2500, quality=True)
+
+    # Split content from trailing JSON metadata block
     content, meta = raw, {}
     m = re.search(r"```json\s*(\{.*?\})\s*```", raw, re.DOTALL)
     if m:
@@ -138,13 +140,16 @@ def generate_post(topic):
         slug = f"{slug}-{hashlib.sha256(title.encode()).hexdigest()[:6]}"
 
     return {
-        "title": title, "slug": slug, "content": content,
-        "excerpt": meta.get("excerpt", content[:200]),
-        "meta_title": meta.get("meta_title", title),
+        "title":            title,
+        "slug":             slug,
+        "content":          content,
+        "excerpt":          meta.get("excerpt", content[:200]),
+        "meta_title":       meta.get("meta_title", title),
         "meta_description": meta.get("meta_description", ""),
-        "tags": meta.get("tags", []),
-        "category": meta.get("category", "ai-tools"),
-        "status": "draft", "is_paywalled": False,
+        "tags":             meta.get("tags", []),
+        "category":         meta.get("category", "ai-tools"),
+        "status":           "draft",
+        "is_paywalled":     False,
     }
 
 
@@ -186,8 +191,10 @@ def main():
 
     log.info(f"Selected: {topic['headline']}")
     post = generate_post(topic)
-    post_id = save_post(post)
+    if not post:
+        log_run("error", "Post generation failed"); return
 
+    post_id = save_post(post)
     if post_id:
         log_run("success", f"Draft created: {post['title'][:80]}", 1)
         log.info(f"Writer complete — post ID {post_id} saved as draft")
