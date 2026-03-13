@@ -1,173 +1,199 @@
-#!/usr/bin/env python3
 """
-write_post.py — Veltrix Content Pipeline
-Daily. Finds trending AI topics via pytrends, picks the best opportunity,
-writes a 1200-word post in Veltrix voice, saves as draft to Supabase.
+Writer - Agent 2 for Veltrix Collective
+Pulls top-scoring news from Supabase, picks the best topic,
+generates a full SEO blog post in Veltix voice using OpenAI (gpt-4o),
+saves as a draft to the posts table, and logs the run.
+Triggered daily at 2am UTC via GitHub Actions.
 """
-import sys, os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import json
-from datetime import datetime, timezone
-from pytrends.request import TrendReq
-from utils.common import get_logger, get_supabase, get_anthropic, log_run, VELTRIX_SYSTEM_PROMPT, slugify, now_utc
+import os, re, json, logging, hashlib
+from datetime import datetime, timezone, timedelta
+import openai, anthropic
+from supabase import create_client
 
-logger = get_logger("write_post")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+log = logging.getLogger("writer")
 
-POST_TEMPLATES = [
-    "Top 10 {topic} Tools Ranked — Tested by Veltrix",
-    "Best AI Tools for {topic} in 2025 — Veltrix Rankings",
-    "The {topic} AI Tools Worth Your Time (And the Ones That Aren't)",
-    "{topic} vs Everything: Veltrix Breaks Down the Best Options",
-]
+SUPABASE_URL  = os.environ["SUPABASE_URL"]
+SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
+OPENAI_KEY    = os.environ["OPENAI_API_KEY"]
+ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 
-def get_trending_topics() -> list[str]:
-    """Get trending AI-related search terms via pytrends."""
+NEWS_LOOKBACK_HOURS = 24
+MIN_SCORE           = 70
+MAX_CANDIDATES      = 10
+TARGET_WORD_COUNT   = 900
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def call_ai(prompt, max_tokens=2000, quality=False):
+    openai_model    = "gpt-4o"            if quality else "gpt-4o-mini"
+    anthropic_model = "claude-sonnet-4-6" if quality else "claude-haiku-4-5-20251001"
     try:
-        pytrends = TrendReq(hl='en-US', tz=360, timeout=(10, 30))
-        # Related topics to "AI tools"
-        pytrends.build_payload(
-            ["AI tools", "Claude API", "ChatGPT", "LLM", "AI assistant"],
-            cat=0, timeframe='now 7-d', geo='', gprop=''
+        client = openai.OpenAI(api_key=OPENAI_KEY)
+        resp = client.chat.completions.create(
+            model=openai_model, max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}]
         )
-        related = pytrends.related_queries()
-        topics = []
-        for kw in ["AI tools", "Claude API", "ChatGPT"]:
-            if kw in related and related[kw]["top"] is not None:
-                top_queries = related[kw]["top"]["query"].tolist()[:5]
-                topics.extend(top_queries)
-
-        # Deduplicate and clean
-        seen = set()
-        unique = []
-        for t in topics:
-            clean = t.strip()
-            if clean.lower() not in seen and len(clean) > 3:
-                seen.add(clean.lower())
-                unique.append(clean)
-
-        logger.info(f"Found {len(unique)} trending topics: {unique[:5]}")
-        return unique[:10]
+        log.info(f"  AI [{openai_model}] responded")
+        return resp.choices[0].message.content
     except Exception as e:
-        logger.warning(f"pytrends failed: {e}, using fallback topics")
-        return [
-            "Claude API automation",
-            "AI tools for content creators",
-            "LLM comparison 2025",
-            "AI productivity tools",
-            "best AI coding assistants",
-        ]
+        log.warning(f"  OpenAI failed ({e}), falling back to Anthropic")
+        client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+        msg = client.messages.create(
+            model=anthropic_model, max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return msg.content[0].text
 
-def pick_best_topic(client, topics: list[str], supabase) -> str:
-    """Use Claude to pick the highest-opportunity topic we haven't covered."""
-    # Check recently published posts to avoid repeats
-    recent = supabase.table("posts").select("title").eq("status", "published").order("created_at", ascending=False).limit(10).execute()
-    recent_titles = [p["title"] for p in recent.data]
 
-    msg = client.messages.create(
-        model="claude-3-5-haiku-20241022",
-        max_tokens=100,
-        messages=[{
-            "role": "user",
-            "content": f"""You are a content strategist for Veltrix Collective, an AI tools hub.
-
-Trending topics this week: {json.dumps(topics)}
-Recently published posts to avoid repeating: {json.dumps(recent_titles)}
-
-Pick the SINGLE best topic from the trending list to write about.
-Criteria: high search intent, not recently covered, AI tools angle possible.
-
-Return ONLY the topic text, nothing else."""
-        }]
+def fetch_candidates():
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=NEWS_LOOKBACK_HOURS)).isoformat()
+    result = (
+        supabase.table("news")
+        .select("id, headline, summary, source_url, source_name, relevance_score")
+        .gte("relevance_score", MIN_SCORE)
+        .gte("published_at", cutoff)
+        .order("relevance_score", desc=True)
+        .limit(MAX_CANDIDATES)
+        .execute()
     )
-    chosen = msg.content[0].text.strip()
-    logger.info(f"Chosen topic: {chosen}")
-    return chosen
+    return result.data or []
 
-def write_post(client, topic: str, supabase) -> dict:
-    """Generate a full 1200-word post in Veltrix voice."""
-    # Get affiliate tools from DB
-    tools = supabase.table("tools").select("name,affiliate_url,description,category,score").order("score", ascending=False).limit(15).execute()
-    tool_list = "\n".join([f"- {t['name']}: {t['description'][:80]} (affiliate: {t['affiliate_url'] or t.get('url', '')})" for t in tools.data])
 
-    veltrix_tools = supabase.table("tools").select("name,affiliate_url,description").eq("is_veltrix_tool", True).limit(3).execute()
-    veltrix_pick = veltrix_tools.data[0] if veltrix_tools.data else {"name": "AI Matchmaker", "affiliate_url": "https://www.veltrixcollective.com/tools/matchmaker", "description": "Find the right tool for any AI task"}
+def already_written(headline):
+    result = supabase.table("posts").select("id").ilike("title", f"%{headline[:40]}%").limit(1).execute()
+    return bool(result.data)
 
-    import random
-    title_template = random.choice(POST_TEMPLATES)
-    title = title_template.format(topic=topic)
 
-    msg = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=2500,
-        system=VELTRIX_SYSTEM_PROMPT,
-        messages=[{
-            "role": "user",
-            "content": f"""Write a complete 1,200-word blog post for Veltrix Collective.
+def pick_topic(candidates):
+    for item in candidates:
+        if not already_written(item["headline"]):
+            return item
+    return None
 
-Title: "{title}"
-Topic: {topic}
 
-Available tools to reference (use affiliate links where available):
-{tool_list}
+def make_slug(title):
+    slug = title.lower()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"\s+", "-", slug.strip())
+    return re.sub(r"-+", "-", slug)[:80]
 
-REQUIRED STRUCTURE:
-1. Intro paragraph — Veltrix voice, reference "we track" or "we tested"
-2. Main listicle — 8-10 tools/options with 2-3 sentence descriptions each
-3. "Veltrix Pick" section at the end — highlight: {veltrix_pick['name']} ({veltrix_pick['description']})
-4. CTA closing: "Want the tools Veltrix uses but doesn't publish? Unlock the insider guides → https://www.veltrixcollective.com/free"
 
-Format as clean HTML (use <h2>, <p>, <strong>, <a href> tags). No markdown.
-Include affiliate links naturally where relevant.
-Write as Veltrix. First person. Direct. No fluff."""
-        }]
+WRITER_PROMPT = """You are Veltix, the AI persona behind Veltrix Collective (veltrixcollective.com).
+
+Write a complete SEO blog post about this AI news story.
+
+Headline: {headline}
+Source: {source_name}
+Summary: {summary}
+Source URL: {source_url}
+
+Requirements:
+- ~{word_count} words
+- First person plural voice. "we track", "we tested", "our rankings".
+- Slightly irreverent. Never corporate. Never hype. Specific about what matters and why.
+- Weave in "you need AI to keep up with AI" naturally at least once
+- Structure: hook intro -> what happened -> why it matters -> what to do -> CTA
+- CTA links to veltrixcollective.com/tools or veltrixcollective.com/insider
+- 2-3 H2 headings using ## markdown
+- Analyse and add perspective — do NOT reproduce the source article
+
+Append this JSON block at the very end:
+```json
+{
+  "title": "SEO title 60 chars max",
+  "excerpt": "2-sentence preview 150 chars max",
+  "meta_title": "Meta title 60 chars max",
+  "meta_description": "Meta description 155 chars max",
+  "tags": ["tag1", "tag2", "tag3"],
+  "category": "ai-tools OR llm-news OR industry OR automation OR research"
+}
+```"""
+
+
+def generate_post(topic):
+    log.info(f"Generating post for: {topic['headline'][:70]}")
+    raw = call_ai(
+        WRITER_PROMPT.format(
+            headline=topic["headline"], source_name=topic["source_name"],
+            summary=topic.get("summary", ""), source_url=topic["source_url"],
+            word_count=TARGET_WORD_COUNT,
+        ),
+        max_tokens=2500, quality=True,
     )
+    content, meta = raw, {}
+    m = re.search(r"```json\s*(\{.*?\})\s*```", raw, re.DOTALL)
+    if m:
+        try:
+            meta = json.loads(m.group(1))
+            content = raw[:m.start()].strip()
+        except json.JSONDecodeError:
+            log.warning("  Metadata JSON parse failed — using fallback values")
 
-    content = msg.content[0].text.strip()
-    slug = slugify(title)
-
-    # Generate meta description
-    meta_msg = client.messages.create(
-        model="claude-3-5-haiku-20241022",
-        max_tokens=100,
-        messages=[{
-            "role": "user",
-            "content": f"Write a 155-character meta description for this post title: '{title}'. Be direct and include the main keyword. No quotes."
-        }]
-    )
-    meta_desc = meta_msg.content[0].text.strip()[:155]
-
-    # Generate excerpt
-    excerpt = content[:300].replace('<', '').replace('>', '').replace('  ', ' ')[:200] + "..."
+    title = meta.get("title") or topic["headline"][:100]
+    slug  = make_slug(title)
+    if supabase.table("posts").select("id").eq("slug", slug).limit(1).execute().data:
+        slug = f"{slug}-{hashlib.sha256(title.encode()).hexdigest()[:6]}"
 
     return {
-        "title": title,
-        "slug": slug,
-        "content": content,
-        "excerpt": excerpt,
-        "meta_title": title[:60],
-        "meta_description": meta_desc,
-        "status": "draft",
-        "category": "tools",
-        "tags": ["ai-tools", slugify(topic), "rankings"],
-        "is_paywalled": False,
-        "created_at": now_utc(),
+        "title": title, "slug": slug, "content": content,
+        "excerpt": meta.get("excerpt", content[:200]),
+        "meta_title": meta.get("meta_title", title),
+        "meta_description": meta.get("meta_description", ""),
+        "tags": meta.get("tags", []),
+        "category": meta.get("category", "ai-tools"),
+        "status": "draft", "is_paywalled": False,
     }
 
+
+def save_post(post):
+    try:
+        result = supabase.table("posts").insert(post).execute()
+        pid = result.data[0]["id"]
+        log.info(f"  Saved post ID {pid}: {post['title'][:60]}")
+        return pid
+    except Exception as e:
+        log.error(f"  Failed to save post: {e}")
+        return None
+
+
+def log_run(status, message, records=0):
+    try:
+        supabase.table("automation_logs").insert({
+            "script_name": "writer", "status": status,
+            "message": message, "records_processed": records,
+        }).execute()
+    except Exception as e:
+        log.warning(f"Automation log failed: {e}")
+
+
 def main():
-    logger.info("=== Veltrix Content Pipeline Starting ===")
-    supabase = get_supabase()
-    client = get_anthropic()
+    log.info("=" * 60)
+    log.info("Writer starting")
+    log.info("=" * 60)
 
-    topics = get_trending_topics()
-    topic = pick_best_topic(client, topics, supabase)
-    post = write_post(client, topic, supabase)
+    candidates = fetch_candidates()
+    log.info(f"Found {len(candidates)} high-scoring items from last {NEWS_LOOKBACK_HOURS}h")
 
-    # Save to Supabase
-    supabase.table("posts").insert(post).execute()
-    logger.info(f"Draft saved: '{post['title']}'")
-    log_run(supabase, "write_post", "success", f"Draft: {post['title']}", 1)
-    print(f"::notice title=Post Created::Draft saved: {post['title']}")
+    if not candidates:
+        log_run("skipped", "No qualifying news items"); return
+
+    topic = pick_topic(candidates)
+    if not topic:
+        log_run("skipped", "All candidates already written"); return
+
+    log.info(f"Selected: {topic['headline']}")
+    post = generate_post(topic)
+    post_id = save_post(post)
+
+    if post_id:
+        log_run("success", f"Draft created: {post['title'][:80]}", 1)
+        log.info(f"Writer complete — post ID {post_id} saved as draft")
+    else:
+        log_run("error", "Failed to save post")
+
 
 if __name__ == "__main__":
     main()
