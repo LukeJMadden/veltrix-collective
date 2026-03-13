@@ -124,36 +124,34 @@ def fetch_rss() -> list[dict]:
 
 
 def fetch_reddit() -> list[dict]:
+    """Fetch via RSS — Reddit's JSON API now blocks anonymous requests."""
     items = []
-    headers = {"User-Agent": "VeltrixScout/1.0 (news aggregator)"}
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=LOOKBACK_HOURS)
     for sub in SUBREDDITS:
         try:
-            url = f"https://www.reddit.com/r/{sub}/new.json?limit=25"
-            resp = requests.get(url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            posts = resp.json()["data"]["children"]
-            for post in posts:
-                p = post["data"]
-                created = datetime.fromtimestamp(p["created_utc"], tz=timezone.utc)
-                if created < cutoff:
+            feed = feedparser.parse(f"https://www.reddit.com/r/{sub}/new.rss")
+            count = 0
+            for entry in feed.entries:
+                pub = parse_date(entry.get("published") or entry.get("updated"))
+                if not is_recent(pub):
                     continue
-                # Skip self-posts with no external link, low-effort posts
-                if p.get("is_self") and p.get("score", 0) < 20:
+                # RSS entries link to the reddit thread; extract external url from content
+                link = entry.get("link", "")
+                title = entry.get("title", "").strip()
+                # Skip mod posts, weekly threads
+                if any(skip in title.lower() for skip in ["weekly thread", "mod post", "[meta]"]):
                     continue
-                link = p.get("url") or f"https://reddit.com{p.get('permalink','')}"
                 items.append({
                     "source": f"r/{sub}",
-                    "title": p.get("title", "").strip(),
+                    "title": title,
                     "url": link,
-                    "summary_raw": p.get("selftext", "")[:300],
-                    "published_at": created,
-                    "score_raw": p.get("score", 0),
+                    "summary_raw": entry.get("summary", "")[:300],
+                    "published_at": pub,
                 })
-            log.info(f"Reddit [r/{sub}] → {len(posts)} posts checked")
-            time.sleep(0.5)  # Polite rate limit
+                count += 1
+            log.info(f"Reddit RSS [r/{sub}] → {count} recent posts")
+            time.sleep(0.5)
         except Exception as e:
-            log.warning(f"Reddit fetch failed [r/{sub}]: {e}")
+            log.warning(f"Reddit RSS failed [r/{sub}]: {e}")
     return items
 
 
@@ -227,10 +225,11 @@ Write ONLY the 3-sentence summary. No intro, no quotes around it."""
 
 def score_item(item: dict) -> int:
     """Ask Claude to score relevance. Returns 0 on failure."""
+    import re
     try:
         msg = claude.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=80,
+            max_tokens=150,
             messages=[{
                 "role": "user",
                 "content": SCORE_PROMPT.format(
@@ -240,11 +239,39 @@ def score_item(item: dict) -> int:
                 )
             }]
         )
-        raw = msg.content[0].text.strip()
-        data = json.loads(raw)
+        # Safely extract text — log raw response on any issue
+        if not msg.content:
+            log.warning(f"  Empty content array | {item['title'][:50]}")
+            return 0
+        block = msg.content[0]
+        if block.type != "text":
+            log.warning(f"  Unexpected block type: {block.type} | {item['title'][:50]}")
+            return 0
+        raw = block.text.strip()
+        if not raw:
+            log.warning(f"  Empty text block | {item['title'][:50]}")
+            return 0
+
+        # Strip markdown code fences if present (```json ... ```)
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+
+        # Try full JSON parse first
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            # Fallback: extract score with regex
+            m = re.search(r'"score"\s*:\s*(\d+)', raw)
+            if m:
+                score = int(m.group(1))
+                log.info(f"  Score {score:3d} (regex fallback) | {item['title'][:60]}")
+                return score
+            log.warning(f"  Unparseable response: {raw[:80]} | {item['title'][:40]}")
+            return 0
+
         score = int(data.get("score", 0))
         log.info(f"  Score {score:3d} | {item['title'][:60]} [{data.get('reason','')}]")
         return score
+
     except Exception as e:
         log.warning(f"  Score failed: {e} | {item['title'][:50]}")
         return 0
@@ -255,7 +282,7 @@ def summarise_item(item: dict) -> str:
     try:
         msg = claude.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=200,
+            max_tokens=250,
             messages=[{
                 "role": "user",
                 "content": SUMMARY_PROMPT.format(
@@ -265,6 +292,8 @@ def summarise_item(item: dict) -> str:
                 )
             }]
         )
+        if not msg.content or msg.content[0].type != "text":
+            return ""
         return msg.content[0].text.strip()
     except Exception as e:
         log.warning(f"  Summarise failed: {e}")
