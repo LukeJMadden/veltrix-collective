@@ -1,0 +1,39 @@
+name: Scout — AI News Monitor
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'   # Every 3 hours
+  workflow_dispatch:          # Allow manual trigger from GitHub UI
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r automations/news/requirements.txt
+
+      - name: Run Scout
+        env:
+          SUPABASE_URL:         ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python automations/news/scout.py
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scout-failure-log
+          path: /tmp/scout-*.log
+          retention-days: 7
