@@ -6,7 +6,7 @@ import { ArrowRight, TrendingUp, Zap, Rss, Shield } from 'lucide-react';
 async function getHomeData() {
   const [{ data: topTools }, { data: latestNews }, { data: latestPosts }] = await Promise.all([
     supabase.from('tools').select('id,name,slug,category,score,is_veltrix_tool,pricing_model').order('score', { ascending: false }).limit(5),
-    supabase.from('news').select('id,headline,summary,source_name,published_at').order('published_at', { ascending: false }).limit(6),
+    supabase.from('news').select('id,headline,summary,source_name,source_url,published_at').order('published_at', { ascending: false }).limit(6),
     supabase.from('posts').select('id,title,slug,excerpt,category,published_at').eq('status', 'published').order('published_at', { ascending: false }).limit(3),
   ]);
   return { topTools: topTools ?? [], latestNews: latestNews ?? [], latestPosts: latestPosts ?? [] };
