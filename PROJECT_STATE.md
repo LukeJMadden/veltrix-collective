@@ -1,5 +1,5 @@
-# Veltrix Collective — Project State
-> **Last updated:** 2026-03-14
+# Veltrix Collective â Project State
+> **Last updated:** 2026-03-14 (Agent 2 Writer added)
 > This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
 
 ---
@@ -9,15 +9,15 @@
 ### Hosting & Infrastructure
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) — persistent process | Live | IP: 5.161.89.154 |
+| **Hetzner VPS** | Discord bot (Agent 4) â persistent process | Live | IP: 5.161.89.154 |
 | **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com — DNS points to Vercel |
+| **Namecheap** | Domain registrar | Live | veltrixcollective.com â DNS points to Vercel |
 | **Tailscale** | VPN | Not in use | Set up for separate project. Not needed for Veltrix. |
 
 ### AI & APIs
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **OpenAI** | PRIMARY AI — all writing, content, scoring | Active | Use until ~$100 credits exhausted |
+| **OpenAI** | PRIMARY AI â all writing, content, scoring | Active | Use until ~$100 credits exhausted |
 | **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
 
 ### Database
@@ -29,12 +29,12 @@
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
 | **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com — support inbox + Brevo sender address |
+| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com â support inbox + Brevo sender address |
 
 ### Payments
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member — updates users.tier + triggers Discord invite |
+| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member â updates users.tier + triggers Discord invite |
 
 ### Community
 | Service | Purpose | Status | Key Details |
@@ -56,7 +56,7 @@
 | NEXT_PUBLIC_SUPABASE_URL | Supabase URL (public) |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anon key (frontend, RLS enforced) |
 | SUPABASE_ANON_KEY | Supabase anon key (server-side API routes) |
-| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY — bypasses RLS) |
+| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY â bypasses RLS) |
 | ANTHROPIC_API_KEY | Claude API (fallback) |
 | OPENAI_API_KEY | OpenAI API (primary) |
 | BREVO_API_KEY | Brevo email |
@@ -103,7 +103,7 @@ BREVO_KEY     = os.environ["BREVO_API_KEY"]
 LS_API_KEY    = os.environ["LEMON_SQUEEZY_API_KEY"]
 ```
 
-### Standard AI call pattern — OpenAI PRIMARY, Claude FALLBACK
+### Standard AI call pattern â OpenAI PRIMARY, Claude FALLBACK
 ```python
 import openai, anthropic, logging
 log = logging.getLogger(__name__)
@@ -196,19 +196,19 @@ Backend-only logging tables. No RLS policy. See Supabase for full columns.
 | Agent | Status | Script | Trigger | Notes |
 |---|---|---|---|---|
 | Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | NOT BUILT | automations/content/write_post.py | Daily 2am UTC | |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs — no Buffer needed |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on — that's why it's on VPS not Actions. |
+| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary. Picks top news item, generates 900-word SEO post in Veltix voice, saves as draft to posts table. Logs to automation_logs. |
+| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs â no Buffer needed |
+| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on â that's why it's on VPS not Actions. |
 | Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
 
 **Why Discord bot is on Hetzner and not GitHub Actions:**
-Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) — perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
+Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) â perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
 
 ### Scout detail
 - Model: gpt-4o-mini (OpenAI primary) with claude-haiku-4-5-20251001 fallback
 - Threshold: 65/100. Lookback: 4h. Cap: 30/run.
 - Sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI (RSS) + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs (Reddit RSS) + HN
-- Reddit: uses /r/{sub}/new.rss (NOT JSON API — returns 403)
+- Reddit: uses /r/{sub}/new.rss (NOT JSON API â returns 403)
 - Dedup: url_hash (SHA256 12-char)
 
 ---
@@ -218,7 +218,7 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 | File | Cron | Runs |
 |---|---|---|
 | .github/workflows/scout.yml | 0 */3 * * * | automations/news/scout.py |
-| (planned) daily.yml | 0 2 * * * | Writer + Publisher |
+| .github/workflows/daily.yml | 0 2 * * * | automations/content/write_post.py |
 | (planned) weekly.yml | 0 8 * * 2 | Newsletter |
 | (planned) monitor.yml | 0 7 * * 1 | Monitor report |
 
@@ -228,31 +228,31 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 
 ```
 veltrix-collective/
-├── site/                          # Next.js (Vercel)
-├── automations/
-│   ├── news/
-│   │   ├── scout.py               LIVE
-│   │   └── requirements.txt
-│   ├── content/
-│   │   ├── write_post.py          PLANNED
-│   │   ├── write_social.py        PLANNED
-│   │   └── publish_post.py        PLANNED
-│   ├── email/
-│   │   ├── send_newsletter.py     PLANNED
-│   │   └── send_goal_checkins.py  PLANNED
-│   ├── rankings/
-│   │   └── update_rankings.py     PLANNED
-│   ├── support/
-│   │   └── triage_support.py      PLANNED
-│   └── monitor/
-│       └── weekly_report.py       PLANNED
-├── tools/                         PLANNED (Phase 5)
-├── .github/workflows/
-│   ├── scout.yml                  LIVE
-│   ├── daily.yml                  PLANNED
-│   ├── weekly.yml                 PLANNED
-│   └── monitor.yml                PLANNED
-└── PROJECT_STATE.md               THIS FILE
+âââ site/                          # Next.js (Vercel)
+âââ automations/
+â   âââ news/
+â   â   âââ scout.py               LIVE
+â   â   âââ requirements.txt
+â   âââ content/
+â   â   âââ write_post.py          PLANNED
+â   â   âââ write_social.py        PLANNED
+â   â   âââ publish_post.py        PLANNED
+â   âââ email/
+â   â   âââ send_newsletter.py     PLANNED
+â   â   âââ send_goal_checkins.py  PLANNED
+â   âââ rankings/
+â   â   âââ update_rankings.py     PLANNED
+â   âââ support/
+â   â   âââ triage_support.py      PLANNED
+â   âââ monitor/
+â       âââ weekly_report.py       PLANNED
+âââ tools/                         PLANNED (Phase 5)
+âââ .github/workflows/
+â   âââ scout.yml                  LIVE
+â   âââ daily.yml                  PLANNED
+â   âââ weekly.yml                 PLANNED
+â   âââ monitor.yml                PLANNED
+âââ PROJECT_STATE.md               THIS FILE
 ```
 
 ---
@@ -286,7 +286,7 @@ Always end with a CTA to a Veltrix tool or the insider paywall.
 | Phase | Status | Summary |
 |---|---|---|
 | Phase 1 - Foundation | DONE | VPS, Supabase, Vercel, repo, all services live |
-| Phase 2 - Content engine | PARTIAL | Scout live; Writer/Publisher not built |
+| Phase 2 - Content engine | PARTIAL | Scout + Writer live; Publisher not built |
 | Phase 3 - Live rankings | TODO | Tools leaderboard, LLM page |
 | Phase 4 - Paywall & community | TODO | Lemon Squeezy set up; guides page + Discord roles not built |
 | Phase 5 - Tool portfolio | TODO | Matchmaker, LLM Tester, News Summariser |
