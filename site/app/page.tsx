@@ -208,7 +208,7 @@ export default async function HomePage() {
                 </div>
                 <h3 className="font-semibold text-primary group-hover:text-accent transition-colors mb-2">{tool.title}</h3>
                 <p className="text-xs text-secondary leading-relaxed">{tool.desc}</p>
-                <div className="mt-4 text-xs text-accent flex items-center gap-1">Use it free <ArrowRight size=12 /></div>
+                <div className="mt-4 text-xs text-accent flex items-center gap-1">Use it free <ArrowRight size={12} /></div>
               </Link>
             ))}
           </div>

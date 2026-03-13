@@ -12,7 +12,7 @@ const INSIDER_GUIDES = [
   { title: 'How to Build and Monetise a Claude Tool in 48 Hours', desc: 'A complete playbook for shipping a paid AI tool as fast as humanly possible.' },
   { title: 'The $9/month AI Business Stack That Makes $X,XXX', desc: 'The exact tools, in the exact order, to run a lean AI business from scratch.' },
   { title: 'Prompt Engineering Playbook: How Veltrix Writes Every Piece of Content', desc: 'The prompts Veltrix uses for posts, social captions, newsletters, and guides.' },
-  { title: 'The Veltrix Affiliate Strategy — Which Programs Pay and Which Don't', desc: 'Honest breakdown of every affiliate program in the AI space. What actually converts.' },
+  { title: "The Veltrix Affiliate Strategy — Which Programs Pay and Which Don't", desc: 'Honest breakdown of every affiliate program in the AI space. What actually converts.' },
 ];
 
 export default async function GuidesPage() {
