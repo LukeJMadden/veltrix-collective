@@ -1,5 +1,5 @@
-# Veltrix Collective â Project State
-> **Last updated:** 2026-03-14 (Agent 2 Writer added)
+# Veltrix Collective Ã¢ÂÂ Project State
+> **Last updated:** 2026-03-14 (Agent 2 Writer live and verified)
 > This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
 
 ---
@@ -9,15 +9,15 @@
 ### Hosting & Infrastructure
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) â persistent process | Live | IP: 5.161.89.154 |
+| **Hetzner VPS** | Discord bot (Agent 4) Ã¢ÂÂ persistent process | Live | IP: 5.161.89.154 |
 | **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com â DNS points to Vercel |
+| **Namecheap** | Domain registrar | Live | veltrixcollective.com Ã¢ÂÂ DNS points to Vercel |
 | **Tailscale** | VPN | Not in use | Set up for separate project. Not needed for Veltrix. |
 
 ### AI & APIs
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **OpenAI** | PRIMARY AI â all writing, content, scoring | Active | Use until ~$100 credits exhausted |
+| **OpenAI** | PRIMARY AI Ã¢ÂÂ all writing, content, scoring | Active | Use until ~$100 credits exhausted |
 | **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
 
 ### Database
@@ -29,12 +29,12 @@
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
 | **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com â support inbox + Brevo sender address |
+| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com Ã¢ÂÂ support inbox + Brevo sender address |
 
 ### Payments
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member â updates users.tier + triggers Discord invite |
+| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member Ã¢ÂÂ updates users.tier + triggers Discord invite |
 
 ### Community
 | Service | Purpose | Status | Key Details |
@@ -56,7 +56,7 @@
 | NEXT_PUBLIC_SUPABASE_URL | Supabase URL (public) |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anon key (frontend, RLS enforced) |
 | SUPABASE_ANON_KEY | Supabase anon key (server-side API routes) |
-| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY â bypasses RLS) |
+| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY Ã¢ÂÂ bypasses RLS) |
 | ANTHROPIC_API_KEY | Claude API (fallback) |
 | OPENAI_API_KEY | OpenAI API (primary) |
 | BREVO_API_KEY | Brevo email |
@@ -103,7 +103,7 @@ BREVO_KEY     = os.environ["BREVO_API_KEY"]
 LS_API_KEY    = os.environ["LEMON_SQUEEZY_API_KEY"]
 ```
 
-### Standard AI call pattern â OpenAI PRIMARY, Claude FALLBACK
+### Standard AI call pattern Ã¢ÂÂ OpenAI PRIMARY, Claude FALLBACK
 ```python
 import openai, anthropic, logging
 log = logging.getLogger(__name__)
@@ -196,19 +196,19 @@ Backend-only logging tables. No RLS policy. See Supabase for full columns.
 | Agent | Status | Script | Trigger | Notes |
 |---|---|---|---|---|
 | Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary. Picks top news item, generates 900-word SEO post in Veltix voice, saves as draft to posts table. Logs to automation_logs. |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs â no Buffer needed |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on â that's why it's on VPS not Actions. |
+| Agent 2: Writer | LIVE ✅ | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary, Claude fallback. Picks highest-scoring news item not yet written, generates ~900-word SEO post in Veltix voice, saves as draft to posts table. Verified working 2026-03-14. |
+| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs Ã¢ÂÂ no Buffer needed |
+| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on Ã¢ÂÂ that's why it's on VPS not Actions. |
 | Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
 
 **Why Discord bot is on Hetzner and not GitHub Actions:**
-Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) â perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
+Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) Ã¢ÂÂ perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
 
 ### Scout detail
 - Model: gpt-4o-mini (OpenAI primary) with claude-haiku-4-5-20251001 fallback
 - Threshold: 65/100. Lookback: 4h. Cap: 30/run.
 - Sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI (RSS) + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs (Reddit RSS) + HN
-- Reddit: uses /r/{sub}/new.rss (NOT JSON API â returns 403)
+- Reddit: uses /r/{sub}/new.rss (NOT JSON API Ã¢ÂÂ returns 403)
 - Dedup: url_hash (SHA256 12-char)
 
 ---
@@ -228,31 +228,31 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 
 ```
 veltrix-collective/
-âââ site/                          # Next.js (Vercel)
-âââ automations/
-â   âââ news/
-â   â   âââ scout.py               LIVE
-â   â   âââ requirements.txt
-â   âââ content/
-â   â   âââ write_post.py          PLANNED
-â   â   âââ write_social.py        PLANNED
-â   â   âââ publish_post.py        PLANNED
-â   âââ email/
-â   â   âââ send_newsletter.py     PLANNED
-â   â   âââ send_goal_checkins.py  PLANNED
-â   âââ rankings/
-â   â   âââ update_rankings.py     PLANNED
-â   âââ support/
-â   â   âââ triage_support.py      PLANNED
-â   âââ monitor/
-â       âââ weekly_report.py       PLANNED
-âââ tools/                         PLANNED (Phase 5)
-âââ .github/workflows/
-â   âââ scout.yml                  LIVE
-â   âââ daily.yml                  PLANNED
-â   âââ weekly.yml                 PLANNED
-â   âââ monitor.yml                PLANNED
-âââ PROJECT_STATE.md               THIS FILE
+Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ site/                          # Next.js (Vercel)
+Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ automations/
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ news/
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ scout.py               LIVE
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ requirements.txt
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ content/
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ write_post.py          PLANNED
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ write_social.py        PLANNED
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ publish_post.py        PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ email/
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ send_newsletter.py     PLANNED
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ send_goal_checkins.py  PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ rankings/
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ update_rankings.py     PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ support/
+Ã¢ÂÂ   Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ triage_support.py      PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ monitor/
+Ã¢ÂÂ       Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ weekly_report.py       PLANNED
+Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ tools/                         PLANNED (Phase 5)
+Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ .github/workflows/
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ scout.yml                  LIVE
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ daily.yml                  PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ weekly.yml                 PLANNED
+Ã¢ÂÂ   Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ monitor.yml                PLANNED
+Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ PROJECT_STATE.md               THIS FILE
 ```
 
 ---
