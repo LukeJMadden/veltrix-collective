@@ -1,12 +1,11 @@
 """
 Publisher - Agent 3 for Veltrix Collective
-Runs after Writer. Finds the oldest unpublished draft, flips it to published,
-generates social captions in Veltix voice, saves to social_posts table,
-and posts to X and LinkedIn if API keys are present.
+Finds oldest draft post, publishes it, generates social captions,
+posts to X if keys present, saves LinkedIn draft and emails it for manual review.
 Triggered daily at 3am UTC via GitHub Actions (1h after Writer).
 """
 
-import os, re, logging
+import os, re, logging, requests
 from datetime import datetime, timezone
 import openai, anthropic
 from supabase import create_client
@@ -18,15 +17,15 @@ SUPABASE_URL  = os.environ["SUPABASE_URL"]
 SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
 OPENAI_KEY    = os.environ["OPENAI_API_KEY"]
 ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
+BREVO_KEY     = os.environ["BREVO_API_KEY"]
 SITE_URL      = "https://veltrixcollective.com"
+NOTIFY_EMAIL  = "hello@veltrixcollective.com"
 
-# Social keys - optional. Script skips gracefully if not set.
-X_API_KEY            = os.environ.get("X_API_KEY", "")
-X_API_SECRET         = os.environ.get("X_API_SECRET", "")
-X_ACCESS_TOKEN       = os.environ.get("X_ACCESS_TOKEN", "")
-X_ACCESS_SECRET      = os.environ.get("X_ACCESS_SECRET", "")
-LINKEDIN_ACCESS_TOKEN = os.environ.get("LINKEDIN_ACCESS_TOKEN", "")
-LINKEDIN_PERSON_URN  = os.environ.get("LINKEDIN_PERSON_URN", "")
+# X keys - optional, posts live if present
+X_API_KEY      = os.environ.get("X_API_KEY", "")
+X_API_SECRET   = os.environ.get("X_API_SECRET", "")
+X_ACCESS_TOKEN = os.environ.get("X_ACCESS_TOKEN", "")
+X_ACCESS_SECRET = os.environ.get("X_ACCESS_SECRET", "")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -51,7 +50,6 @@ def call_ai(prompt, max_tokens=500, quality=False):
         return msg.content[0].text.strip()
 
 
-# ── Fetch oldest unpublished draft ───────────────────────────────────────
 def fetch_draft():
     result = (
         supabase.table("posts")
@@ -64,7 +62,6 @@ def fetch_draft():
     return result.data[0] if result.data else None
 
 
-# ── Publish post ─────────────────────────────────────────────────────────
 def publish_post(post_id):
     now = datetime.now(timezone.utc).isoformat()
     supabase.table("posts").update({
@@ -75,24 +72,54 @@ def publish_post(post_id):
     log.info(f"  Published post ID {post_id}")
 
 
-# ── Generate social captions ──────────────────────────────────────────────
-TWITTER_PROMPT = """You are Veltix from Veltrix Collective.
+# ── X (Twitter) caption ──────────────────────────────────────────────────
+TWITTER_PROMPT = """You are Veltrix — the AI persona behind Veltrix Collective.
 Write a single tweet (max 260 chars) about this post. Punchy, specific, no hype.
 End with this URL: {url}
 
 Post title: {title}
 Excerpt: {excerpt}
 
-Return ONLY the tweet text. No quotes around it."""
+Return ONLY the tweet text. No quotes."""
 
-LINKEDIN_PROMPT = """You are Veltix from Veltrix Collective.
-Write a LinkedIn post (150-250 words) about this article. Authoritative and insightful.
-First line is a hook. Use short paragraphs. End with a CTA linking to: {url}
+
+# ── LinkedIn caption (Luke's personal voice) ─────────────────────────────
+# Luke is an AI practitioner and thought leader on AI + business.
+# Voice: first-person, insightful, practitioner-level, never corporate.
+# Veltrix mention: subtle and occasional — "been tracking this at veltrixcollective.com"
+# style, not a direct ad. Omit Veltrix entirely in some posts.
+LINKEDIN_PROMPT = """You are writing a LinkedIn post for Luke, an AI practitioner and
+founder who shares genuine learnings about AI and its business impact.
+
+Write a LinkedIn post (150-220 words) reacting to this AI news story.
 
 Post title: {title}
 Excerpt: {excerpt}
+Article URL: {url}
 
-Return ONLY the LinkedIn post text. No quotes around it."""
+Voice guidelines:
+- First person singular (I, my, we when referring to work)
+- Practitioner tone: share a real insight or implication, not just a summary
+- Thought leadership: connect the news to a broader trend or business impact
+- Hook first line — make it worth stopping the scroll
+- Short paragraphs, 1-2 sentences each
+- Never corporate-speak. Never "exciting times" or "game changer".
+- {veltrix_mention}
+- End with a question or a concrete takeaway that invites engagement
+
+Return ONLY the LinkedIn post text. No intro, no quotes around it."""
+
+import random
+
+def get_veltrix_mention():
+    """Rotate: 60% no mention, 25% subtle, 15% with link."""
+    r = random.random()
+    if r < 0.60:
+        return "Do NOT mention Veltrix Collective or any project in this post."
+    elif r < 0.85:
+        return "Optionally weave in a subtle reference like 'been tracking this space closely' — no links, no project names."
+    else:
+        return f"You can naturally mention 'I've been tracking developments like this at veltrixcollective.com' once, only if it fits organically."
 
 
 def generate_social_captions(post):
@@ -101,14 +128,15 @@ def generate_social_captions(post):
         url=url, title=post["title"], excerpt=post.get("excerpt", "")[:200]
     ), max_tokens=120)
     linkedin = call_ai(LINKEDIN_PROMPT.format(
-        url=url, title=post["title"], excerpt=post.get("excerpt", "")[:200]
-    ), max_tokens=400)
+        url=url, title=post["title"],
+        excerpt=post.get("excerpt", "")[:200],
+        veltrix_mention=get_veltrix_mention()
+    ), max_tokens=450)
     log.info(f"  Twitter ({len(twitter)} chars): {twitter[:60]}...")
     log.info(f"  LinkedIn ({len(linkedin)} chars)")
-    return twitter, linkedin
+    return twitter, linkedin, url
 
 
-# ── Save social posts to DB ───────────────────────────────────────────────
 def save_social_post(post_id, platform, content, platform_post_id=""):
     supabase.table("social_posts").insert({
         "post_id":          post_id,
@@ -119,10 +147,10 @@ def save_social_post(post_id, platform, content, platform_post_id=""):
     }).execute()
 
 
-# ── Post to X (Twitter) ───────────────────────────────────────────────────
+# ── Post to X ─────────────────────────────────────────────────────────────
 def post_to_x(text, post_id):
     if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET]):
-        log.info("  X keys not set — saving caption as draft")
+        log.info("  X keys not set — saving as draft")
         save_social_post(post_id, "twitter", text)
         return
     try:
@@ -140,42 +168,45 @@ def post_to_x(text, post_id):
         save_social_post(post_id, "twitter", text)
 
 
-# ── Post to LinkedIn ─────────────────────────────────────────────────────
-def post_to_linkedin(text, post_id, post_url):
-    if not all([LINKEDIN_ACCESS_TOKEN, LINKEDIN_PERSON_URN]):
-        log.info("  LinkedIn keys not set — saving caption as draft")
-        save_social_post(post_id, "linkedin", text)
-        return
+# ── LinkedIn: save draft + email to Luke for manual posting ──────────────
+def handle_linkedin(text, post_id, post_url, post_title):
+    save_social_post(post_id, "linkedin", text)
+    log.info("  LinkedIn caption saved as draft — sending email notification")
+    send_linkedin_email(text, post_url, post_title)
+
+
+def send_linkedin_email(caption, post_url, post_title):
+    """Email the LinkedIn caption to Luke via Brevo for manual review + posting."""
     try:
-        import requests
+        html = f"""
+        <h2>LinkedIn post ready for review</h2>
+        <p><strong>Article:</strong> <a href="{post_url}">{post_title}</a></p>
+        <hr>
+        <p style="white-space:pre-wrap;font-family:sans-serif;font-size:15px;line-height:1.6">{caption}</p>
+        <hr>
+        <p style="font-size:12px;color:#888">
+        Copy the text above and post to <a href="https://linkedin.com">LinkedIn</a>.
+        Edit freely — this is a draft in your voice.
+        </p>
+        """
         payload = {
-            "author": f"urn:li:person:{LINKEDIN_PERSON_URN}",
-            "lifecycleState": "PUBLISHED",
-            "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {"text": text},
-                    "shareMediaCategory": "ARTICLE",
-                    "media": [{"status": "READY", "originalUrl": post_url}]
-                }
-            },
-            "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
+            "sender":     {"name": "Veltrix Publisher", "email": "hello@veltrixcollective.com"},
+            "to":         [{"email": NOTIFY_EMAIL}],
+            "subject":    f"LinkedIn draft ready: {post_title[:60]}",
+            "htmlContent": html,
         }
         r = requests.post(
-            "https://api.linkedin.com/v2/ugcPosts",
+            "https://api.brevo.com/v3/smtp/email",
             json=payload,
-            headers={"Authorization": f"Bearer {LINKEDIN_ACCESS_TOKEN}", "Content-Type": "application/json"},
+            headers={"api-key": BREVO_KEY, "Content-Type": "application/json"},
             timeout=15
         )
         r.raise_for_status()
-        li_id = r.json().get("id", "")
-        save_social_post(post_id, "linkedin", text, li_id)
-        log.info(f"  Posted to LinkedIn: {li_id}")
+        log.info(f"  LinkedIn email sent to {NOTIFY_EMAIL}")
     except Exception as e:
-        log.warning(f"  LinkedIn post failed: {e} — saving as draft")
-        save_social_post(post_id, "linkedin", text)
+        log.warning(f"  LinkedIn email failed: {e}")
 
 
-# ── Log run ───────────────────────────────────────────────────────────────
 def log_run(status, message, records=0):
     try:
         supabase.table("automation_logs").insert({
@@ -186,7 +217,6 @@ def log_run(status, message, records=0):
         log.warning(f"Automation log failed: {e}")
 
 
-# ── Main ─────────────────────────────────────────────────────────────────
 def main():
     log.info("=" * 60)
     log.info("Publisher starting")
@@ -201,16 +231,17 @@ def main():
 
     log.info(f"Publishing: {post['title']}")
     publish_post(post["id"])
-
     post_url = f"{SITE_URL}/blog/{post['slug']}"
     log.info(f"  Live at: {post_url}")
 
     log.info("Generating social captions...")
-    twitter_text, linkedin_text = generate_social_captions(post)
+    twitter_text, linkedin_text, url = generate_social_captions(post)
 
-    log.info("Posting to social platforms...")
+    log.info("Posting to X...")
     post_to_x(twitter_text, post["id"])
-    post_to_linkedin(linkedin_text, post["id"], post_url)
+
+    log.info("Handling LinkedIn (draft + email)...")
+    handle_linkedin(linkedin_text, post["id"], url, post["title"])
 
     log_run("success", f"Published: {post['title'][:80]}", 1)
     log.info("=" * 60)
