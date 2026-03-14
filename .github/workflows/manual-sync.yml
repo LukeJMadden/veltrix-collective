@@ -1,0 +1,29 @@
+name: Manual File Sync
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync files
+        env:
+          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install supabase requests
+          python3 << 'EOF'
+          import os, requests
+          from supabase import create_client
+          supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+          files = supabase.table("github_file_queue").select("*").eq("status", "pending").execute().data
+          for f in (files or []):
+            gr = requests.get(f"https://api.github.com/repos/LukeJMadden/veltrix-collective/contents/{f['file_path']}", headers={"Authorization": f"token {os.environ['GITHUB_TOKEN']}"})
+            body = {"message": f["commit_message"], "content": f["file_content"]}
+            if gr.status_code == 200: body["sha"] = gr.json()["sha"]
+            pr = requests.put(f"https://api.github.com/repos/LukeJMadden/veltrix-collective/contents/{f['file_path']}", headers={"Authorization": f"token {os.environ['GITHUB_TOKEN']}", "Content-Type": "application/json"}, json=body)
+            supabase.table("github_file_queue").update({"status": "synced" if pr.ok else "failed"}).eq("id", f["id"]).execute()
+            print(f"{u'✅' if pr.ok else u'☠'} {f['file_path']}")
+          EOF
