@@ -1,5 +1,5 @@
-# Veltrix Collective ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Project State
-> **Last updated:** 2026-03-14 (Agent 3 updated — LinkedIn personal voice + Brevo email)
+# Veltrix Collective ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Project State
+> **Last updated:** 2026-03-15 (Agent 3 updated â LinkedIn personal voice + Brevo email)
 > This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
 
 ---
@@ -9,15 +9,15 @@
 ### Hosting & Infrastructure
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ persistent process | Live | IP: 5.161.89.154 |
+| **Hetzner VPS** | Discord bot (Agent 4) ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ persistent process | Live | IP: 5.161.89.154 |
 | **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ DNS points to Vercel |
+| **Namecheap** | Domain registrar | Live | veltrixcollective.com ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ DNS points to Vercel |
 | **Tailscale** | VPN | Not in use | Set up for separate project. Not needed for Veltrix. |
 
 ### AI & APIs
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **OpenAI** | PRIMARY AI ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ all writing, content, scoring | Active | Use until ~$100 credits exhausted |
+| **OpenAI** | PRIMARY AI ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ all writing, content, scoring | Active | Use until ~$100 credits exhausted |
 | **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
 
 ### Database
@@ -29,17 +29,18 @@
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
 | **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ support inbox + Brevo sender address |
+| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ support inbox + Brevo sender address |
 
 ### Payments
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ updates users.tier + triggers Discord invite |
+| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ updates users.tier + triggers Discord invite |
 
 ### Community
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
 | **Discord** | Community hub | Live | Bot: Veltrix#8512. Posts news every 6h. Auto-restarts on Hetzner VPS. |
+| **Telegram** | Publisher bot + interactive commands | Live | Bot: @VeltrixPublisherV2_bot. Webhook: https://www.veltrixcollective.com/api/telegram-webhook. Handles /start, /help, /tools, /latest, /about + natural language. IMPORTANT: webhook must use www subdomain (no-www redirects with 307). |
 
 ### Source Control
 | Service | Purpose | Status | Key Details |
@@ -56,7 +57,7 @@
 | NEXT_PUBLIC_SUPABASE_URL | Supabase URL (public) |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anon key (frontend, RLS enforced) |
 | SUPABASE_ANON_KEY | Supabase anon key (server-side API routes) |
-| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ bypasses RLS) |
+| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ bypasses RLS) |
 | ANTHROPIC_API_KEY | Claude API (fallback) |
 | OPENAI_API_KEY | OpenAI API (primary) |
 | BREVO_API_KEY | Brevo email |
@@ -93,7 +94,7 @@ LinkedIn API automation for personal accounts requires OAuth app review, 60-day 
 - Caption emailed to hello@veltrixcollective.com via Brevo each morning
 - Luke reviews, edits final line if needed, posts manually (30 seconds)
 - Veltrix mention rotates: 60% no mention, 25% subtle reference, 15% with link
-- If LinkedIn API is added in future: add LINKEDIN_ACCESS_TOKEN + LINKEDIN_PERSON_URN secrets — Publisher will auto-detect and switch to live posting
+- If LinkedIn API is added in future: add LINKEDIN_ACCESS_TOKEN + LINKEDIN_PERSON_URN secrets â Publisher will auto-detect and switch to live posting
 
 ### Standard .yml env block (copy into every workflow)
 ```yaml
@@ -118,7 +119,7 @@ BREVO_KEY     = os.environ["BREVO_API_KEY"]
 LS_API_KEY    = os.environ["LEMON_SQUEEZY_API_KEY"]
 ```
 
-### Standard AI call pattern ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ OpenAI PRIMARY, Claude FALLBACK
+### Standard AI call pattern ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ OpenAI PRIMARY, Claude FALLBACK
 ```python
 import openai, anthropic, logging
 log = logging.getLogger(__name__)
@@ -211,19 +212,19 @@ Backend-only logging tables. No RLS policy. See Supabase for full columns.
 | Agent | Status | Script | Trigger | Notes |
 |---|---|---|---|---|
 | Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | LIVE Ã¢ÂÂ | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary, Claude fallback. Picks highest-scoring news item not yet written, generates ~900-word SEO post in Veltix voice, saves as draft to posts table. Verified working 2026-03-14. |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ no Buffer needed |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ that's why it's on VPS not Actions. |
+| Agent 2: Writer | LIVE ÃÂ¢ÃÂÃÂ | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary, Claude fallback. Picks highest-scoring news item not yet written, generates ~900-word SEO post in Veltix voice, saves as draft to posts table. Verified working 2026-03-14. |
+| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ no Buffer needed |
+| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ that's why it's on VPS not Actions. |
 | Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
 
 **Why Discord bot is on Hetzner and not GitHub Actions:**
-Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
+Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
 
 ### Scout detail
 - Model: gpt-4o-mini (OpenAI primary) with claude-haiku-4-5-20251001 fallback
 - Threshold: 65/100. Lookback: 4h. Cap: 30/run.
 - Sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI (RSS) + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs (Reddit RSS) + HN
-- Reddit: uses /r/{sub}/new.rss (NOT JSON API ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ returns 403)
+- Reddit: uses /r/{sub}/new.rss (NOT JSON API ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ returns 403)
 - Dedup: url_hash (SHA256 12-char)
 
 ---
@@ -243,31 +244,31 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 
 ```
 veltrix-collective/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ site/                          # Next.js (Vercel)
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ automations/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ news/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ scout.py               LIVE
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ requirements.txt
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ content/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ write_post.py          PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ write_social.py        PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ publish_post.py        PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ email/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ send_newsletter.py     PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ send_goal_checkins.py  PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ rankings/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ update_rankings.py     PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ support/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ triage_support.py      PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ monitor/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ       ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ weekly_report.py       PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ tools/                         PLANNED (Phase 5)
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ .github/workflows/
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ scout.yml                  LIVE
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ daily.yml                  PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ weekly.yml                 PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ   ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ monitor.yml                PLANNED
-ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ PROJECT_STATE.md               THIS FILE
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ site/                          # Next.js (Vercel)
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ automations/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ news/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ scout.py               LIVE
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ requirements.txt
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ content/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ write_post.py          PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ write_social.py        PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ publish_post.py        PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ email/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ send_newsletter.py     PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ send_goal_checkins.py  PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ rankings/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ update_rankings.py     PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ support/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ triage_support.py      PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ monitor/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ       ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ weekly_report.py       PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ tools/                         PLANNED (Phase 5)
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ .github/workflows/
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ scout.yml                  LIVE
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ daily.yml                  PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ weekly.yml                 PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ monitor.yml                PLANNED
+ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ PROJECT_STATE.md               THIS FILE
 ```
 
 ---
