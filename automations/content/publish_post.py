@@ -15,7 +15,6 @@ import anthropic
 import requests
 from composio import Composio
 
-# OpenAI is optional - fall back to Anthropic if key missing
 try:
     import openai
     OPENAI_AVAILABLE = bool(os.environ.get("OPENAI_API_KEY"))
@@ -60,7 +59,6 @@ def call_ai(prompt: str, max_tokens: int = 800) -> str:
 
 
 def get_latest_post() -> dict | None:
-    """Get most recent published post not yet tweeted."""
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/posts",
         headers=HEADERS,
@@ -122,13 +120,14 @@ def post_thread(tweets: list[str]) -> list[str]:
     reply_to_id = None
 
     for i, text in enumerate(tweets):
-        params = {"text": text}
+        # v0.11 uses `input` not `params`
+        tool_input = {"text": text}
         if reply_to_id:
-            params["reply"] = {"in_reply_to_tweet_id": reply_to_id}
+            tool_input["reply"] = {"in_reply_to_tweet_id": reply_to_id}
 
         result = composio.tools.execute(
             slug="TWITTER_CREATION_OF_A_POST",
-            params=params,
+            input=tool_input,
             user_id="default",
         )
 
