@@ -9,7 +9,8 @@ import os
 import re
 import json
 import logging
-import hashlib
+import string
+import random
 from datetime import datetime, timezone
 
 import openai
@@ -19,9 +20,9 @@ import requests
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
-OPENAI_KEY   = os.environ["OPENAI_API_KEY"]
+SUPABASE_URL  = os.environ["SUPABASE_URL"]
+SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
+OPENAI_KEY    = os.environ["OPENAI_API_KEY"]
 ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 HEADERS = {
@@ -62,7 +63,7 @@ def call_ai(prompt: str, max_tokens: int = 2000) -> str:
 
 
 def get_top_story() -> dict | None:
-    """Get the highest-scoring unwritten news story from the last 48 hours."""
+    """Get the highest-scoring unwritten news story."""
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/news",
         headers=HEADERS,
@@ -82,9 +83,10 @@ def get_top_story() -> dict | None:
     return items[0]
 
 
-def make_slug(title: str, post_id: int) -> str:
+def make_slug(title: str) -> str:
+    """Generate a unique URL-safe slug."""
     base = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:60]
-    suffix = hashlib.md5(str(post_id).encode()).hexdigest()[:6]
+    suffix = ''.join(random.choices(string.ascii_lowercase, k=6))
     return f"{base}-{suffix}"
 
 
@@ -112,7 +114,6 @@ Return a JSON object with these exact keys:
 Return ONLY valid JSON. No markdown fences."""
 
     raw = call_ai(prompt, max_tokens=3000)
-    # Strip any accidental markdown fences
     raw = raw.strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
@@ -124,6 +125,7 @@ def save_post(post_data: dict, story_id: int) -> int:
     now = datetime.now(timezone.utc).isoformat()
     payload = {
         "title":            post_data["title"],
+        "slug":             make_slug(post_data["title"]),
         "excerpt":          post_data["excerpt"],
         "content":          post_data["content"],
         "meta_title":       post_data["meta_title"],
@@ -136,20 +138,13 @@ def save_post(post_data: dict, story_id: int) -> int:
         "view_count":       0,
     }
 
-    # Generate unique slug
-    import random, string
-    slug_base = re.sub(r'[^a-z0-9]+', '-', post_data["title"].lower()).strip('-')[:60]
-    slug = f"{slug_base}-{random.choices(string.ascii_lowercase, k=6)}"
-    payload["slug"] = slug
-
     resp = requests.post(
         f"{SUPABASE_URL}/rest/v1/posts",
         headers=HEADERS,
         json=payload
     )
     resp.raise_for_status()
-    new_post = resp.json()[0]
-    new_post_id = new_post["id"]
+    new_post_id = resp.json()[0]["id"]
 
     # Mark news story as written
     requests.patch(
@@ -164,17 +159,13 @@ def save_post(post_data: dict, story_id: int) -> int:
 
 def main():
     log.info("Agent 2: Writer starting")
-
     story = get_top_story()
     if not story:
         log.info("Nothing to write today. Exiting.")
         return
-
     log.info(f"Writing post for: {story['headline']} (score={story['relevance_score']})")
-
     post_data = write_post(story)
     post_id = save_post(post_data, story["id"])
-
     log.info(f"Done. Post ID: {post_id} | Title: {post_data['title']}")
 
 

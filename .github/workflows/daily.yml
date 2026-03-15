@@ -2,12 +2,12 @@ name: Daily Content Pipeline
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # 2am UTC - runs Writer
-    - cron: '0 5 * * *'   # 5am UTC - runs Publisher
+    - cron: '0 2 * * *'
+    - cron: '0 5 * * *'
   workflow_dispatch:
     inputs:
       agent:
-        description: 'Which agent to run manually'
+        description: 'Which agent to run'
         required: true
         default: 'writer'
         type: choice
@@ -20,9 +20,9 @@ jobs:
   writer:
     name: "Agent 2: Writer"
     runs-on: ubuntu-latest
-    if: >
-      (github.event_name == 'schedule' && github.event.schedule == '0 2 * * *') ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'writer' || github.event.inputs.agent == 'both'))
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'writer' || github.event.inputs.agent == 'both') ||
+      github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -41,9 +41,9 @@ jobs:
   publisher:
     name: "Agent 3: Publisher"
     runs-on: ubuntu-latest
-    if: >
-      (github.event_name == 'schedule' && github.event.schedule == '0 5 * * *') ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'publisher' || github.event.inputs.agent == 'both'))
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'publisher' || github.event.inputs.agent == 'both') ||
+      github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
