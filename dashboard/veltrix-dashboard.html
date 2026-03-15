@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veltrix — Mission Control</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+  :root {
+    --bg:#080a0f;--surface:#0d1117;--surface2:#131920;--border:#1e2a36;
+    --accent:#00e5ff;--accent2:#7b61ff;--accent3:#ff6b35;
+    --green:#00ff88;--yellow:#ffd60a;--red:#ff3b5c;
+    --text:#e8edf2;--muted:#5a6a7a;
+    --done:#00ff88;--partial:#ffd60a;--todo:#5a6a7a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px 24px;}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;padding-bottom:24px;border-bottom:1px solid var(--border);}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-mark{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:#000;}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;letter-spacing:-0.5px;}
+  .logo-text span{color:var(--accent);}
+  .header-meta{text-align:right;color:var(--muted);font-size:11px;}
+  .live-pulse{display:inline-flex;align-items:center;gap:6px;color:var(--green);margin-bottom:4px;}
+  .pulse-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.8);}}
+  .nav{display:flex;gap:4px;margin-bottom:32px;background:var(--surface);padding:4px;border-radius:10px;border:1px solid var(--border);width:fit-content;}
+  .nav-tab{padding:8px 20px;border-radius:7px;cursor:pointer;font-family:'Syne',sans-serif;font-weight:600;font-size:12px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);transition:all 0.2s;border:none;background:none;}
+  .nav-tab.active{background:var(--surface2);color:var(--accent);border:1px solid var(--border);}
+  .nav-tab:hover:not(.active){color:var(--text);}
+  .panel{display:none;}.panel.active{display:block;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+  .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+  .stat-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--text);line-height:1;}
+  .stat-sub{font-size:11px;color:var(--muted);margin-top:6px;}
+  .loading-shimmer{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;height:28px;width:80px;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  .phase-list{display:flex;flex-direction:column;gap:12px;}
+  .phase-item{display:grid;grid-template-columns:140px 1fr auto;align-items:start;gap:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;transition:border-color 0.2s;cursor:pointer;}
+  .phase-item:hover{border-color:var(--accent);}
+  .phase-item.expanded{border-color:var(--accent2);}
+  .phase-name{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;}
+  .phase-summary{color:var(--muted);font-size:12px;}
+  .phase-details{display:none;grid-column:1/-1;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);color:var(--muted);font-size:11px;}
+  .phase-item.expanded .phase-details{display:block;}
+  .phase-details ul{list-style:none;display:flex;flex-direction:column;gap:4px;}
+  .phase-details li::before{content:'→ ';color:var(--accent);}
+  .status-badge{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .status-done{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
+  .status-partial{background:rgba(255,214,10,0.1);color:var(--yellow);border:1px solid rgba(255,214,10,0.2);}
+  .status-todo{background:rgba(90,106,122,0.1);color:var(--muted);border:1px solid var(--border);}
+  .status-live{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
+  .status-planned{background:rgba(90,106,122,0.1);color:var(--muted);border:1px solid var(--border);}
+  .agent-grid{display:flex;flex-direction:column;gap:10px;}
+  .agent-row{display:grid;grid-template-columns:220px 80px 1fr 120px;align-items:center;gap:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+  .agent-name{font-family:'Syne',sans-serif;font-weight:600;font-size:12px;}
+  .agent-desc{color:var(--muted);font-size:11px;}
+  .agent-trigger{color:var(--accent2);font-size:11px;text-align:right;}
+  .flow-diagram{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;overflow-x:auto;}
+  .flow-row{display:flex;align-items:center;gap:0;margin-bottom:24px;flex-wrap:wrap;}
+  .flow-node{padding:10px 16px;border-radius:8px;font-size:11px;font-weight:500;white-space:nowrap;border:1px solid;position:relative;}
+  .flow-node.external{background:rgba(123,97,255,0.1);border-color:rgba(123,97,255,0.3);color:var(--accent2);}
+  .flow-node.agent{background:rgba(0,229,255,0.1);border-color:rgba(0,229,255,0.3);color:var(--accent);}
+  .flow-node.storage{background:rgba(0,255,136,0.1);border-color:rgba(0,255,136,0.3);color:var(--green);}
+  .flow-node.output{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.3);color:var(--accent3);}
+  .flow-node.owner{background:rgba(255,214,10,0.1);border-color:rgba(255,214,10,0.3);color:var(--yellow);}
+  .flow-arrow{padding:0 8px;color:var(--muted);font-size:14px;}
+  .flow-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+  .flow-section{margin-bottom:28px;}
+  .security-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .security-platform{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .security-platform-title{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .check-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid rgba(30,42,54,0.5);cursor:pointer;transition:opacity 0.2s;}
+  .check-item:last-child{border-bottom:none;}
+  .check-item:hover{opacity:0.8;}
+  .check-box{width:16px;height:16px;border:1px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+  .check-item.checked .check-box{background:var(--green);border-color:var(--green);}
+  .check-item.checked .check-box::after{content:'✓';color:#000;font-size:10px;font-weight:bold;}
+  .check-item.checked .check-text{text-decoration:line-through;color:var(--muted);}
+  .check-text{font-size:11px;color:var(--text);line-height:1.4;}
+  .security-progress{margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+  .progress-bar-wrap{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--accent));border-radius:2px;transition:width 0.4s ease;}
+  .progress-pct{font-size:10px;color:var(--green);font-weight:600;width:32px;text-align:right;}
+  .schema-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .schema-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .schema-table-header{padding:10px 14px;background:var(--surface2);font-family:'Syne',sans-serif;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .schema-fields{padding:8px 14px;}
+  .schema-field{display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid rgba(30,42,54,0.3);}
+  .schema-field:last-child{border-bottom:none;}
+  .field-name{color:var(--text);font-size:11px;flex:1;}
+  .field-type{color:var(--accent2);font-size:10px;}
+  .field-pk{color:var(--yellow);font-size:9px;background:rgba(255,214,10,0.1);padding:1px 5px;border-radius:3px;}
+  .field-fk{color:var(--accent3);font-size:9px;background:rgba(255,107,53,0.1);padding:1px 5px;border-radius:3px;}
+  .milestone-list{display:flex;flex-direction:column;gap:0;}
+  .milestone-item{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--border);}
+  .milestone-item:last-child{border-bottom:none;}
+  .milestone-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:transparent;flex-shrink:0;}
+  .milestone-dot.done{background:var(--green);border-color:var(--green);}
+  .milestone-dot.next{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
+  .milestone-label{font-family:'Syne',sans-serif;font-weight:600;font-size:12px;}
+  .milestone-desc{color:var(--muted);font-size:11px;margin-top:2px;}
+  .milestone-count{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--muted);}
+  .milestone-count.done{color:var(--green);}
+  .milestone-count.next{color:var(--accent);}
+  .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);color:var(--green);font-size:10px;padding:3px 8px;border-radius:20px;}
+  .config-banner{background:rgba(255,214,10,0.05);border:1px solid rgba(255,214,10,0.2);border-radius:10px;padding:16px;margin-bottom:24px;font-size:12px;color:var(--yellow);}
+  .config-banner code{background:rgba(255,214,10,0.1);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;}
+  .news-item{padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
+  .news-headline{font-weight:500;font-size:12px;margin-bottom:4px;}
+  .news-meta{font-size:10px;color:var(--muted);display:flex;gap:12px;}
+  .news-score{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">V</div>
+      <div>
+        <div class="logo-text">Veltrix <span>Mission Control</span></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px;">Internal dashboard — not for public access</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="live-pulse"><div class="pulse-dot"></div> <span id="conn-status">Connecting...</span></div>
+      <div id="last-refresh">—</div>
+    </div>
+  </header>
+
+  <!-- CONFIG — edit these two lines -->
+  <script>
+    const SUPABASE_URL = 'https://qftpohuyvshbvhwxmkvn.supabase.co';
+    const SUPABASE_ANON_KEY = 'PASTE_YOUR_ANON_KEY_HERE';
+    // Get anon key from Vercel dashboard → NEXT_PUBLIC_SUPABASE_ANON_KEY
+    // This key is safe to use here — it's the public anon key with RLS enforced.
+  </script>
+
+  <div id="config-warning" class="config-banner" style="display:none">
+    ⚠️ Add your Supabase anon key to run live. Open this file, find <code>PASTE_YOUR_ANON_KEY_HERE</code> and replace it with the value of <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> from your Vercel dashboard. Stats will then load live.
+  </div>
+
+  <nav class="nav">
+    <button class="nav-tab active" onclick="showTab('overview')">Overview</button>
+    <button class="nav-tab" onclick="showTab('buildplan')">Build Plan</button>
+    <button class="nav-tab" onclick="showTab('agents')">Agents</button>
+    <button class="nav-tab" onclick="showTab('dataflow')">Data Flow</button>
+    <button class="nav-tab" onclick="showTab('schema')">Schema</button>
+    <button class="nav-tab" onclick="showTab('security')">Security</button>
+    <button class="nav-tab" onclick="showTab('growth')">Growth</button>
+    <button class="nav-tab" onclick="showTab('news')">Live News</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="panel active">
+    <div class="grid-4" style="margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-label">News Items (DB)</div>
+        <div class="stat-value" id="stat-news"><div class="loading-shimmer"></div></div>
+        <div class="stat-sub">stored in Supabase</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tools Indexed</div>
+        <div class="stat-value" id="stat-tools"><div class="loading-shimmer"></div></div>
+        <div class="stat-sub">in tools table</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Published Posts</div>
+        <div class="stat-value" id="stat-posts"><div class="loading-shimmer"></div></div>
+        <div class="stat-sub">status = published</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Registered Users</div>
+        <div class="stat-value" id="stat-users">—</div>
+        <div class="stat-sub">requires service key</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Services Live Right Now</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>Scout Agent (GitHub Actions)</span><span class="live-badge"><div class="pulse-dot"></div>LIVE</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>Discord Bot (Hetzner VPS)</span><span class="live-badge"><div class="pulse-dot"></div>LIVE</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>Telegram Bot (@VeltrixPublisherV2_bot)</span><span class="live-badge"><div class="pulse-dot"></div>LIVE</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>Vercel Frontend</span><span class="live-badge"><div class="pulse-dot"></div>LIVE</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span>Supabase DB</span><span id="sb-status" class="live-badge"><div class="pulse-dot"></div>CHECKING</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+            <span>Writer / Publisher / SEO Agents</span><span class="status-badge status-planned">NOT BUILT</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Next Priority Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent);">
+            <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;color:var(--accent);">Phase 2.5 — Security</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Go through security checklist tab. Make GitHub repo private first.</div>
+          </div>
+          <div style="padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent2);">
+            <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;color:var(--accent2);">Phase 2 — Writer Agent</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Build write_post.py — daily 2am UTC, feeds Publisher.</div>
+          </div>
+          <div style="padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--accent3);">
+            <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;color:var(--accent3);">Phase 6 — SEO Agent</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Programmatic compare pages compound from day one.</div>
+          </div>
+          <div style="padding:10px;background:var(--surface2);border-radius:8px;border-left:3px solid var(--yellow);">
+            <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:11px;color:var(--yellow);">Phase 4 — Insider Paywall</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">Milestone bar, referral system, preferences page.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title">Latest News from Scout (Live)</div>
+      <div id="latest-news">
+        <div style="color:var(--muted);font-size:12px;">Loading latest news from Supabase...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUILD PLAN -->
+  <div id="tab-buildplan" class="panel">
+    <div class="phase-list" id="phase-list"></div>
+  </div>
+
+  <!-- AGENTS -->
+  <div id="tab-agents" class="panel">
+    <div style="margin-bottom:20px;" class="card">
+      <div class="card-title">Autonomy Tiers</div>
+      <div class="grid-3">
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;border-top:2px solid var(--green);">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--green);margin-bottom:8px;">FULLY AUTONOMOUS</div>
+          <div style="font-size:11px;color:var(--muted);">SEO updates · Adding tools · Social posts · Metrics logging · Running sales (within limits) · Scout</div>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;border-top:2px solid var(--yellow);">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--yellow);margin-bottom:8px;">APPROVE THEN RUN</div>
+          <div style="font-size:11px;color:var(--muted);">A/B tests · New content angles · Newsletter outreach · New cron jobs · Journey posts</div>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:8px;border-top:2px solid var(--red);">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--red);margin-bottom:8px;">APPROVE BEFORE + AFTER</div>
+          <div style="font-size:11px;color:var(--muted);">Feature builds · Pricing changes · Payment flow · Architecture changes</div>
+        </div>
+      </div>
+    </div>
+    <div class="agent-grid" id="agent-grid"></div>
+  </div>
+
+  <!-- DATA FLOW -->
+  <div id="tab-dataflow" class="panel">
+    <div class="flow-diagram">
+      <div class="flow-section">
+        <div class="flow-label">Content Ingestion</div>
+        <div class="flow-row">
+          <div class="flow-node external">RSS Feeds</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Scout Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node storage">news table</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Writer Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node storage">posts table</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node external">Reddit RSS</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Scout Agent</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node external">Hacker News</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Scout Agent</div>
+        </div>
+      </div>
+      <div class="flow-section">
+        <div class="flow-label">Distribution</div>
+        <div class="flow-row">
+          <div class="flow-node storage">posts table</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Publisher Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">X / Twitter</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node agent">Publisher Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">LinkedIn</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node agent">Publisher Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">Medium</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node storage">news table</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Discord Bot (VPS)</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">Discord #ai-news</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node external">User message</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Telegram Bot</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">Telegram reply</div>
+        </div>
+      </div>
+      <div class="flow-section">
+        <div class="flow-label">User & Revenue Flow</div>
+        <div class="flow-row">
+          <div class="flow-node external">Visitor</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">veltrixcollective.com</div><div class="flow-arrow">→</div>
+          <div class="flow-node storage">users table (free)</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node storage">users table (free)</div><div class="flow-arrow">→</div>
+          <div class="flow-node external">Lemon Squeezy checkout</div><div class="flow-arrow">→</div>
+          <div class="flow-node storage">users.tier = paid</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node storage">users.tier = paid</div><div class="flow-arrow">→</div>
+          <div class="flow-node output">Discord invite sent</div>
+        </div>
+      </div>
+      <div class="flow-section">
+        <div class="flow-label">Evolution & Approval Loop</div>
+        <div class="flow-row">
+          <div class="flow-node storage">Supabase metrics</div><div class="flow-arrow">→</div>
+          <div class="flow-node agent">Evolution Agent</div><div class="flow-arrow">→</div>
+          <div class="flow-node storage">evolution_log</div>
+        </div>
+        <div class="flow-row">
+          <div class="flow-node agent">Evolution Agent (high stakes)</div><div class="flow-arrow">→</div>
+          <div class="flow-node owner">Luke (Telegram/email)</div><div class="flow-arrow">→ approve/reject →</div>
+          <div class="flow-node agent">Agent executes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHEMA -->
+  <div id="tab-schema" class="panel">
+    <div class="schema-grid" id="schema-grid"></div>
+  </div>
+
+  <!-- SECURITY -->
+  <div id="tab-security" class="panel">
+    <div class="grid-3" style="margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-label">Overall Progress</div>
+        <div class="stat-value" id="security-stat">0</div>
+        <div style="margin-top:12px;"><div class="progress-bar-wrap" style="height:6px;"><div class="progress-bar-fill" id="security-overall-bar" style="width:0%"></div></div></div>
+        <div class="stat-sub" id="security-overall-pct">0% complete</div>
+      </div>
+      <div class="stat-card" style="grid-column:span 2;">
+        <div class="stat-label">Priority</div>
+        <div style="font-size:12px;color:var(--yellow);margin-top:8px;">Make GitHub repo private first. Then Hetzner VPS hardening (SSH key-only + fail2ban). Then rotate all API keys.</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">Checks persist in your browser's localStorage.</div>
+      </div>
+    </div>
+    <div class="security-grid" id="security-grid"></div>
+  </div>
+
+  <!-- GROWTH -->
+  <div id="tab-growth" class="panel">
+    <div class="grid-2" style="margin-bottom:24px;">
+      <div class="card">
+        <div class="card-title">Insider Milestone Tracker</div>
+        <div class="milestone-list" id="milestone-items"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Free vs Paid</div>
+        <div style="margin-bottom:16px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--green);margin-bottom:8px;">ALWAYS FREE</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);">
+            <div>→ Weekly newsletter (curated news)</div>
+            <div>→ Tools directory + LLM rankings</div>
+            <div>→ CLAUDE.md generator</div>
+            <div>→ Public guides + blog posts</div>
+            <div>→ Top 10 prompt library</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:16px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--accent);margin-bottom:8px;">INSIDER (PAID)</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);">
+            <div>→ Full prompt library + templates vault</div>
+            <div>→ Role-specific newsletter sections</div>
+            <div>→ Submit questions (answered in newsletter)</div>
+            <div>→ Discord (unlocks at 200 insiders)</div>
+            <div>→ Weekly live Q&amp;A (unlocks at 500)</div>
+            <div>→ Role content tracks (unlocks at 1000)</div>
+            <div>→ Early tool access (unlocks at 10,000)</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:11px;color:var(--yellow);margin-bottom:8px;">REFERRAL REWARDS</div>
+          <div style="font-size:11px;color:var(--muted);">Refer 10 paying subscribers in a calendar month = that month free. Via Lemon Squeezy pause API (mode:free + resumes_at).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE NEWS -->
+  <div id="tab-news" class="panel">
+    <div class="card">
+      <div class="card-title">Latest from Scout (Live from Supabase)</div>
+      <div id="news-full-list">
+        <div style="color:var(--muted);font-size:12px;">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Tab navigation ───────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ─── Supabase live data ───────────────────────────────────────────
+async function sbFetch(table, params = '') {
+  if (SUPABASE_ANON_KEY === 'PASTE_YOUR_ANON_KEY_HERE') return null;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Prefer': 'count=exact'
+    }
+  });
+  if (!res.ok) return null;
+  const count = res.headers.get('content-range')?.split('/')[1];
+  const data = await res.json();
+  return { data, count: count ? parseInt(count) : data.length };
+}
+
+async function loadLiveData() {
+  if (SUPABASE_ANON_KEY === 'PASTE_YOUR_ANON_KEY_HERE') {
+    document.getElementById('config-warning').style.display = 'block';
+    document.getElementById('conn-status').textContent = 'No key — static mode';
+    document.getElementById('stat-news').textContent = '—';
+    document.getElementById('stat-tools').textContent = '—';
+    document.getElementById('stat-posts').textContent = '—';
+    document.getElementById('latest-news').innerHTML = '<div style="color:var(--muted);font-size:12px;">Add anon key to see live data.</div>';
+    document.getElementById('news-full-list').innerHTML = '<div style="color:var(--muted);font-size:12px;">Add anon key to see live data.</div>';
+    document.getElementById('sb-status').innerHTML = '⚠ NO KEY';
+    document.getElementById('sb-status').style.color = 'var(--yellow)';
+    return;
+  }
+
+  try {
+    // Parallel fetch
+    const [newsR, toolsR, postsR, latestNewsR] = await Promise.all([
+      sbFetch('news', 'select=id&limit=1'),
+      sbFetch('tools', 'select=id&limit=1'),
+      sbFetch('posts', 'select=id&status=eq.published&limit=1'),
+      sbFetch('news', 'select=headline,summary,source_name,relevance_score,published_at&order=published_at.desc&limit=5'),
+    ]);
+
+    if (newsR !== null) {
+      document.getElementById('stat-news').textContent = newsR.count ?? '—';
+      document.getElementById('conn-status').textContent = 'Connected to Supabase';
+      document.getElementById('sb-status').innerHTML = '<div class="pulse-dot"></div>LIVE';
+    }
+    if (toolsR !== null) document.getElementById('stat-tools').textContent = toolsR.count ?? '—';
+    if (postsR !== null) document.getElementById('stat-posts').textContent = postsR.count ?? '—';
+
+    if (latestNewsR?.data?.length) {
+      const renderNews = (items) => items.map(n => `
+        <div class="news-item">
+          <div class="news-headline">${n.headline}</div>
+          <div class="news-meta">
+            <span>${n.source_name || 'Unknown'}</span>
+            <span class="news-score">Score: ${n.relevance_score}/100</span>
+            <span>${n.published_at ? new Date(n.published_at).toLocaleDateString() : ''}</span>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('latest-news').innerHTML = renderNews(latestNewsR.data);
+    }
+
+    // Full news tab
+    const fullNews = await sbFetch('news', 'select=headline,summary,source_name,source_url,relevance_score,published_at&order=published_at.desc&limit=50');
+    if (fullNews?.data?.length) {
+      document.getElementById('news-full-list').innerHTML = fullNews.data.map(n => `
+        <div class="news-item">
+          <div class="news-headline"><a href="${n.source_url}" target="_blank" style="color:var(--text);text-decoration:none;">${n.headline}</a></div>
+          <div style="font-size:11px;color:var(--muted);margin:4px 0 6px;">${n.summary || ''}</div>
+          <div class="news-meta">
+            <span>${n.source_name || ''}</span>
+            <span class="news-score">Score: ${n.relevance_score}/100</span>
+            <span>${n.published_at ? new Date(n.published_at).toLocaleString() : ''}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('last-refresh').textContent = 'Refreshed ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('conn-status').textContent = 'Connection error';
+    console.error(e);
+  }
+}
+
+loadLiveData();
+setInterval(loadLiveData, 60000); // refresh every 60s
+
+// ─── Build plan ───────────────────────────────────────────────────
+const phases = [
+  { name:'Phase 1 — Foundation', status:'done', summary:'VPS, Supabase, Vercel, repo, all services live', details:['Hetzner VPS live (5.161.89.154)','Supabase configured with full schema','Vercel frontend auto-deploying from GitHub','Discord bot live on VPS','Telegram bot live with webhook','All services connected and authenticated'] },
+  { name:'Phase 2 — Content Engine', status:'partial', summary:'Scout live + Telegram bot live. Writer/Publisher not built.', details:['✅ Scout agent live — runs every 3h via GitHub Actions','✅ Telegram bot live — @VeltrixPublisherV2_bot','❌ Writer agent (write_post.py) — not built','❌ Publisher agent (publish_post.py) — not built','Publisher target: X, LinkedIn, Medium, YouTube simultaneously'] },
+  { name:'Phase 2.5 — Security', status:'todo', summary:'Platform-by-platform hardening checklist', details:['Make GitHub repo private','Enable 2FA on all platforms','Rotate all API keys','Hetzner: SSH key-only, fail2ban, UFW firewall','SPF/DKIM/DMARC for email sending'] },
+  { name:'Phase 3 — Live Rankings', status:'todo', summary:'Tools leaderboard, LLM comparison page', details:['Tools directory with voting','LLM rankings with scoring across 6 dimensions','tool_comparisons pages (chatgpt-vs-claude etc)','affiliate_url monetisation on tool cards'] },
+  { name:'Phase 4 — Paywall & Community', status:'todo', summary:'Insider milestone bar, referral system, preferences', details:['Milestone progress bar (activate at 150+ insiders)','Referral tracking against existing schema','Free month reward via LS pause API (10 referrals/month)','Subscriber preferences/toggle page','Role collection field on newsletter signup'] },
+  { name:'Phase 5 — Tool Portfolio', status:'todo', summary:'CLAUDE.md Generator (priority), Matchmaker, LLM Tester', details:['CLAUDE.md Generator — free tool, natural insider upsell','Matchmaker — find right AI tool for your use case','LLM Tester — compare models on your prompts','News Summariser — custom digest builder','Business model: free tool → hit wall → insider converts'] },
+  { name:'Phase 6 — SEO Automation', status:'todo', summary:'Programmatic pages, meta generation, keyword gap analysis', details:['Comparison pages auto-generated (claude-vs-gpt4o etc)','Auto meta title + description for all pages','Internal linking agent','Weekly keyword gap analysis','Schema markup for rich search results','Compounds from day one — build early'] },
+  { name:'Phase 7 — Email & Newsletter', status:'todo', summary:'Segmented sends, role-based content, referral nudges', details:['Role-based dynamic content blocks in Brevo','Automated referral nudge emails at 1 and 7 referrals','Goal check-in email sequences','Segmented sends once 2000+ subscribers'] },
+  { name:'Phase 8 — Digital Products', status:'todo', summary:'AI Video Prompt Pack + 4 others via Lemon Squeezy', details:['AI Video Prompt Pack','Claude Code Workflow Pack','Developer Productivity Prompt Pack','Teaching with AI Pack','Exec AI Briefing Pack'] },
+  { name:'Phase 9 — A/B Testing', status:'todo', summary:'Proposal → approve → run → report → implement', details:['ab_tests table in Supabase','Proposal agent generates hypotheses from traffic data','Approval via dashboard (you approve hypothesis + duration)','Results agent reports at end date with recommendation','Low-risk: auto-implement. Higher-risk: queue for approval'] },
+  { name:'Phase 10 — Sales Automation', status:'todo', summary:'Conversion monitor, auto-discount trigger, seasonal sales', details:['Daily conversion rate monitoring','3 consecutive days below threshold → auto-trigger LS discount','Sale end date auto-set, auto-expires','Seasonal calendar: Black Friday, New Year etc pre-configured'] },
+  { name:'Phase 11 — Evolution Agent', status:'todo', summary:'Platform heartbeat — daily observe, weekly act, approval loop', details:['Daily: pull metrics, run web sweep, log to evolution_log','Weekly: generate improvement proposal bundle','Low stakes: act + log silently','Medium stakes: act + notify Luke via Telegram','High stakes: draft proposal, wait for yes/no','Journey posts: drafted weekly, queued for Luke approval, auto-published'] },
+];
+
+const phaseList = document.getElementById('phase-list');
+phases.forEach((p,i) => {
+  const el = document.createElement('div');
+  el.className = 'phase-item';
+  el.innerHTML = `
+    <div class="phase-name">${p.name}</div>
+    <div class="phase-summary">${p.summary}</div>
+    <span class="status-badge status-${p.status}">${p.status}</span>
+    <div class="phase-details"><ul>${p.details.map(d=>`<li>${d}</li>`).join('')}</ul></div>
+  `;
+  el.addEventListener('click', () => el.classList.toggle('expanded'));
+  phaseList.appendChild(el);
+});
+
+// ─── Agents ───────────────────────────────────────────────────────
+const agents = [
+  { name:'Agent 1: Scout', status:'live', desc:'RSS + Reddit RSS + HN. Scores with OpenAI (65/100 threshold). Deduped by SHA256 hash. Saves to news table.', trigger:'Every 3h (Actions)' },
+  { name:'Agent 2: Writer', status:'planned', desc:'Pulls top scored news, writes post in Veltix voice via OpenAI. Saves draft to posts table.', trigger:'Daily 2am UTC' },
+  { name:'Agent 3: Publisher', status:'planned', desc:'Takes published posts, distributes to X, LinkedIn, Medium, YouTube script simultaneously.', trigger:'On new post' },
+  { name:'Agent 4: Discord Bot', status:'live', desc:'Posts top news every 6h to Discord. Persistent WebSocket — must be on VPS, not GitHub Actions.', trigger:'Continuous (VPS)' },
+  { name:'Agent 5: Telegram Bot', status:'live', desc:'@VeltrixPublisherV2_bot. Handles /start /help /tools /latest /about + natural language. www subdomain critical.', trigger:'Real-time webhook' },
+  { name:'Agent 6: SEO', status:'planned', desc:'Auto-generates comparison pages, meta tags, internal links. Weekly keyword gap analysis. Compounds from day one.', trigger:'Weekly' },
+  { name:'Agent 7: Newsletter', status:'planned', desc:'Compiles newsletter from Scout data. Segments by role. Dynamic content blocks via Brevo. Sends when approved.', trigger:'Weekly' },
+  { name:'Agent 8: Sales Monitor', status:'planned', desc:'Watches product conversion rate daily. 3 days below threshold = auto-triggers LS discount. Logs all actions.', trigger:'Daily' },
+  { name:'Agent 9: AB Tester', status:'planned', desc:'Proposes A/B tests from traffic data. Luke approves. Agent runs variant, reports results, proposes winner.', trigger:'On approval' },
+  { name:'Agent 10: Evolution', status:'planned', desc:'Platform heartbeat. Daily observe. Weekly improvement proposals. Low-stakes auto-executes. High-stakes escalates to Luke.', trigger:'Daily/Weekly' },
+];
+
+const agentGrid = document.getElementById('agent-grid');
+agents.forEach(a => {
+  const el = document.createElement('div');
+  el.className = 'agent-row';
+  el.innerHTML = `
+    <div class="agent-name">${a.name}</div>
+    <span class="status-badge status-${a.status}">${a.status}</span>
+    <div class="agent-desc">${a.desc}</div>
+    <div class="agent-trigger">${a.trigger}</div>
+  `;
+  agentGrid.appendChild(el);
+});
+
+// ─── Schema ───────────────────────────────────────────────────────
+const tables = [
+  { name:'users', rls:'private', fields:[['id','uuid','PK'],['email','text',''],['tier','enum',''],['referral_code','text',''],['referred_by','text','FK'],['referral_count','int',''],['referral_month_count','int',''],['role','enum',''],['segment','text',''],['tags','array',''],['created_at','timestamp','']] },
+  { name:'news', rls:'public read', fields:[['id','serial','PK'],['headline','text',''],['summary','text',''],['source_url','text',''],['source_name','text',''],['relevance_score','int',''],['url_hash','text','unique'],['published_at','timestamp',''],['created_at','timestamp','']] },
+  { name:'posts', rls:'public read', fields:[['id','uuid','PK'],['title','text',''],['slug','text','unique'],['content','text',''],['status','enum',''],['is_paywalled','bool',''],['view_count','int',''],['meta_title','text',''],['meta_description','text',''],['published_at','timestamp','']] },
+  { name:'tools', rls:'public read', fields:[['id','serial','PK'],['name','text',''],['slug','text','unique'],['category','enum',''],['score','int',''],['votes','int',''],['pricing_model','enum',''],['is_veltrix_tool','bool',''],['affiliate_url','text','']] },
+  { name:'referrals', rls:'private', fields:[['id','uuid','PK'],['referrer_code','text',''],['referred_email','text',''],['referred_user_id','uuid','FK→users'],['status','enum',''],['reward_type','text',''],['confirmed_at','timestamp','']] },
+  { name:'products', rls:'public read', fields:[['id','serial','PK'],['title','text',''],['slug','text','unique'],['price_usd','decimal',''],['product_type','enum',''],['lemon_squeezy_product_id','text',''],['sales_count','int',''],['active','bool','']] },
+  { name:'ab_tests', rls:'private', fields:[['id','uuid','PK'],['hypothesis','text',''],['variant_a','text',''],['variant_b','text',''],['status','enum',''],['approved_at','timestamp',''],['end_date','timestamp',''],['result_winner','text',''],['result_data','jsonb','']] },
+  { name:'evolution_log', rls:'private', fields:[['id','uuid','PK'],['action_type','enum',''],['description','text',''],['reasoning','text',''],['stakes_level','enum',''],['approved_by','text',''],['executed_at','timestamp',''],['result','text','']] },
+  { name:'llm_rankings', rls:'public read', fields:[['id','serial','PK'],['model_name','text',''],['provider','text',''],['score_overall','int',''],['score_coding','int',''],['score_reasoning','int',''],['input_cost_per_1m','decimal',''],['updated_at','timestamp','']] },
+  { name:'tool_comparisons', rls:'public read', fields:[['id','serial','PK'],['slug','text','unique'],['tool_a_id','int','FK→tools'],['tool_b_id','int','FK→tools'],['content','text',''],['view_count','int','']] },
+  { name:'social_posts', rls:'private', fields:[['id','uuid','PK'],['post_id','uuid','FK→posts'],['platform','enum',''],['content','text',''],['status','enum',''],['platform_post_id','text',''],['scheduled_at','timestamp','']] },
+  { name:'newsletters', rls:'private', fields:[['id','serial','PK'],['subject','text',''],['status','enum',''],['recipient_count','int',''],['open_count','int',''],['click_count','int',''],['sent_at','timestamp','']] },
+];
+
+const schemaGrid = document.getElementById('schema-grid');
+tables.forEach(t => {
+  const isPrivate = t.rls === 'private';
+  const el = document.createElement('div');
+  el.className = 'schema-table';
+  el.innerHTML = `
+    <div class="schema-table-header">${t.name}<span class="rls-badge status-badge ${isPrivate?'status-todo':'status-live'}">${t.rls}</span></div>
+    <div class="schema-fields">${t.fields.map(([name,type,flag])=>`
+      <div class="schema-field">
+        <span class="field-name">${name}</span>
+        <span class="field-type">${type}</span>
+        ${flag==='PK'?'<span class="field-pk">PK</span>':''}
+        ${flag.startsWith('FK')?`<span class="field-fk">${flag}</span>`:''}
+        ${flag==='unique'?'<span style="color:var(--accent);font-size:9px">unique</span>':''}
+      </div>`).join('')}
+    </div>`;
+  schemaGrid.appendChild(el);
+});
+
+// ─── Security checklist ───────────────────────────────────────────
+const securityData = [
+  { platform:'GitHub', icon:'🐙', items:['Make repository private','Enable 2FA on GitHub account','Audit collaborators — remove stale','Rotate GITHUB_PAT','Enable secret scanning alerts','Enable Dependabot','Scan repo history for committed secrets','Branch protection on main'] },
+  { platform:'Supabase', icon:'⚡', items:['Enable 2FA on Supabase account','Confirm RLS on all tables','Audit RLS policies — private tables locked','Rotate service role key + anon key','Set up email alerts for unusual DB activity','DB password strong + not in plaintext'] },
+  { platform:'Vercel', icon:'▲', items:['Enable 2FA on Vercel account','Audit env vars — remove stale','SERVICE_KEY never exposed to frontend','Deployment protection on previews','Audit team member access'] },
+  { platform:'GitHub Actions', icon:'⚙️', items:['Audit secrets — remove stale','Minimum required permissions on workflows','Pin action versions to commit hashes','Audit for accidental secret logging'] },
+  { platform:'Lemon Squeezy', icon:'🍋', items:['Enable 2FA','Rotate webhook secret — update everywhere','Webhook validates signature on every request','Restrict to required webhook events','Rotate + audit API keys'] },
+  { platform:'Brevo', icon:'📧', items:['Enable 2FA','Rotate BREVO_API_KEY','Unsubscribe links in all emails','SPF + DKIM + DMARC on veltrixcollective.com'] },
+  { platform:'Hetzner VPS', icon:'🖥️', items:['Disable password SSH — key-based only','Change SSH port from 22','UFW firewall — open only required ports','Enable automatic security updates','Discord bot runs as non-root user','Set up fail2ban','No secrets hardcoded in bot scripts','Enable snapshot/backup schedule'] },
+  { platform:'Namecheap + Domain', icon:'🌐', items:['Enable 2FA on Namecheap','Enable domain lock','WHOIS privacy protection active','Audit DNS records','SSL auto-renewing on Vercel'] },
+  { platform:'OpenAI + Anthropic', icon:'🤖', items:['Enable 2FA on both accounts','Spending limits on both','Rotate both API keys','Audit usage dashboards for unexpected calls'] },
+  { platform:'Zoho + General', icon:'🔐', items:['Enable 2FA on Zoho','SPF + DKIM for hello@veltrixcollective.com','Password manager — unique password per platform','Credentials documented securely','Recovery codes stored offline'] },
+];
+
+const securityGrid = document.getElementById('security-grid');
+const checkState = JSON.parse(localStorage.getItem('veltrix-security') || '{}');
+
+function updateSecurityStats() {
+  let total = 0, done = 0;
+  document.querySelectorAll('.check-item').forEach(item => { total++; if (item.classList.contains('checked')) done++; });
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('security-overall-bar').style.width = pct + '%';
+  document.getElementById('security-overall-pct').textContent = pct + '% complete';
+  document.getElementById('security-stat').innerHTML = done + '<span style="font-size:16px;color:var(--muted)">/' + total + '</span>';
+}
+
+securityData.forEach(platform => {
+  const card = document.createElement('div');
+  card.className = 'security-platform';
+  const checkedCount = platform.items.filter(item => checkState[platform.platform + ':' + item]).length;
+  const pct = Math.round((checkedCount / platform.items.length) * 100);
+  card.innerHTML = `
+    <div class="security-platform-title"><span>${platform.icon}</span> ${platform.platform}</div>
+    <div class="security-progress">
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      <div class="progress-pct">${pct}%</div>
+    </div>
+    <div class="check-items">${platform.items.map(item => {
+      const key = platform.platform + ':' + item;
+      const checked = checkState[key] ? 'checked' : '';
+      return `<div class="check-item ${checked}" data-key="${key}"><div class="check-box"></div><div class="check-text">${item}</div></div>`;
+    }).join('')}</div>`;
+  card.querySelectorAll('.check-item').forEach(checkItem => {
+    checkItem.addEventListener('click', () => {
+      checkItem.classList.toggle('checked');
+      checkState[checkItem.dataset.key] = checkItem.classList.contains('checked');
+      localStorage.setItem('veltrix-security', JSON.stringify(checkState));
+      const allItems = card.querySelectorAll('.check-item');
+      const doneItems = card.querySelectorAll('.check-item.checked');
+      const newPct = Math.round((doneItems.length / allItems.length) * 100);
+      card.querySelector('.progress-bar-fill').style.width = newPct + '%';
+      card.querySelector('.progress-pct').textContent = newPct + '%';
+      updateSecurityStats();
+    });
+  });
+  securityGrid.appendChild(card);
+});
+updateSecurityStats();
+
+// ─── Growth milestones ────────────────────────────────────────────
+const milestones = [
+  { count:'Day 1', label:'Founding pricing locked', desc:'Forever rate for first subscribers. No bar shown until 150+ insiders.', next:true },
+  { count:'100', label:'Price increase', desc:'Founding rate closes. New rate activates.' },
+  { count:'200', label:'Discord opens', desc:'Paid only. Gated onboarding question to filter noise.' },
+  { count:'500', label:'Weekly live Q&A', desc:'Luke answering questions live, recorded for members.' },
+  { count:'1,000', label:'Role content tracks', desc:'Developer / Teacher / IT Exec tailored sections launch.' },
+  { count:'2,000', label:'Second price increase', desc:'Early members keep their rate forever.' },
+  { count:'5,000', label:'Community contributions', desc:'Top members submit prompts, guides, reviews.' },
+  { count:'10,000', label:'Tool portfolio launches', desc:'Phase 5 tools go live. Insiders get early access + discount.' },
+];
+
+const milestoneContainer = document.getElementById('milestone-items');
+milestones.forEach(m => {
+  const el = document.createElement('div');
+  el.className = 'milestone-item';
+  el.innerHTML = `
+    <div class="milestone-dot ${m.done?'done':m.next?'next':''}"></div>
+    <div class="milestone-content">
+      <div class="milestone-label" style="color:${m.done?'var(--green)':m.next?'var(--accent)':'var(--text)'}">${m.label}</div>
+      <div class="milestone-desc">${m.desc}</div>
+    </div>
+    <div class="milestone-count ${m.done?'done':m.next?'next':''}">${m.count}</div>`;
+  milestoneContainer.appendChild(el);
+});
+</script>
+</body>
+</html>
