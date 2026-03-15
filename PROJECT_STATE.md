@@ -1,237 +1,148 @@
-# Veltrix Collective — Project State
-> **Last updated:** 2026-03-15
-> This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
+# Veltrix Collective - Project State
+> Last updated: 2026-03-15
 
----
+## 0. Operating Rules
+1. Discuss first, build second. Align with Luke before writing code. Counter-propose, stress-test ideas. Be a thinking partner.
+2. Research before recommending. Check docs before suggesting solutions.
+3. Automate blockers permanently. Build permanent solutions, document as How-To, never leave manual steps as recurring dependencies.
+4. Secrets never in chat. Use Vercel env vars or Supabase vault. See Section 9 How-Tos.
+5. Document every hard-won solution in Section 9 How-To guides.
+6. Update PROJECT_STATE.md at end of every session via github-file-syncer inline mode (How-To #1).
 
-## 0. AI Session Rules (Read First)
+## 1. Services
+Hetzner VPS: Discord bot Agent 4, IP 5.161.89.154
+Vercel: Next.js frontend, auto-deploys from GitHub main
+Namecheap: veltrixcollective.com domain
+OpenAI: PRIMARY AI (gpt-4o / gpt-4o-mini)
+Anthropic: FALLBACK AI (claude-sonnet-4-6 / claude-haiku-4-5-20251001)
+Supabase: Primary DB, Project ID qftpohuyvshbvhwxmkvn, ap-southeast-1
+Brevo: Email + newsletters
+Zoho: hello@veltrixcollective.com
+Lemon Squeezy: Paywall, webhook to /api/activate-member
+Discord: Veltrix#8512, posts news every 6h, Hetzner VPS
+GitHub: Repo + CI/CD, Actions secrets in Settings
 
-These rules govern hw every AI session must behave. Non-negotiable.
+## 2. GitHub Actions Secrets
+ANTHROPIC_API_KEY -> os.environ[ANTHROPIC_API_KEY]
+OPENAI_API_KEY -> os.environ[OPENAI_API_KEY]
+BREVO_API_KEY -> os.environ[BREVO_API_KEY]
+LEMON_SQUEEZY_API_KEY -> os.environ[LEMON_SQUEEZY_API_KEY]
+LEMON_SQUEEZY_WEBHOOK_SECRET -> os.environ[LEMON_SQUEEZY_WEBHOOK_SECRET]
+NEXT_PUBLIC_SUPABASE_URL -> os.environ[SUPABASE_URL]
+SUPABASE_SERVICE_ROLE_KEY -> os.environ[SUPABASE_SERVICE_KEY]
 
-### Before starting any build
-1. Read this full file
-2. Do not ask Luke to confirm information already documented here
-3. Use exact variable names, secret names, and model strings documented here — never invent alternatives
-
-### Alignment before build
-- For any task larger than a single-file fix, **discuss with Luke before writing a single line of code**
-- Don't just agree — push back, propose alternatives, identify risks, stress-test the approach
-- Ask: "Is this the right solution or just the obvious one?"
-- If Luke's idea has a better alternative, say so with reasoning
-
-### Automation first
-- If a task requires Luke's manual input, first ask: "Can this be permanently automated?"
-- Design the automation, propose it to Luke, get sign-off, then build it
-- Only fall back to manual if there is genuinely no automation path
-
-### Secrets rule
-- **Never ask for or post secrets in chat**
-- Secrets live in: GitHub Actions secrets (for workflow scripts) or Vercel env vars (for site)
-- Secrets are accessed programmatically via: Supabase vault → `get_github_token()` RPC pattern
-- If a new secret is needed: add to GitHub Actions + Vercel dashboard, document name here, access via env in scripts
-- The Supabase vault + edge function pattern is the correct way to access secrets from within a session
-
-### Pushing to GitHub (from a session)
-- See How-To #1 below — use the `github-file-syncer` edge function pattern
-- For files >10KB: use `github-push-file` edge function with content in request body (bypasses SQL size limit)
-- Never spend more than 2 tool calls trying an approach— if it fails, use the queue pattern
-
-### Updating PROJECT_STATE.md
-- Update at end of every session where a milestone was completed
-- Use `github-push-file` edge function for large files (call from browser JS)
-- Commit message format: `[milestone] Brief description`
-
----
-
-## 1. Services & Credentials
-
-### Hosting & Infrastructure
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) — persistent process | Live | IP: 5.161.89.154 |
-| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com |
-
-### AI & APIs
-| **OpenAI** | PRIMARY AI | Active | Use until ~$100 credits |
-| **Anthropic** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
-
-### Database
-| **Supabase** | Primary database | Live | Project ID: qftpohuyvshbvhwxmkvn, Region: ap-southeast-1 |
-
----
-
-## 2. Environment Variables
-
-**See full list in previous version - unchanged.**
-
-Standard patterns are documented in the How-To section.
-
----
+Standard yml env block uses: secrets.NEXT_PUBLIC_SUPABASE_URL, secrets.SUPABASE_SERVICE_ROLE_KEY, secrets.ANTHROPIC_API_KEY, secrets.OPENAI_API_KEY, secrets.BREVO_API_KEY, secrets.LEMON_SQUEEZY_API_KEY, secrets.LEMON_SQUEEZY_WEBHOOK_SECRET
+Standard AI call: OpenAI primary (gpt-4o/gpt-4o-mini), Claude fallback (claude-sonnet-4-6/claude-haiku-4-5-20251001)
 
 ## 3. Supabase
+Project ID: qftpohuyvshbvhwxmkvn | Region: ap-southeast-1 | Postgres: 17.6
+RLS: Private (no policy): automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs
+RLS: Public READ: news, posts (published), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters
+RLS: Public INSERT: tool_votes
+DB Functions: increment_tool_votes, increment_referral_count, get_github_token() SECURITY DEFINER
+Edge Functions:
+  github-file-syncer (v5) - DUAL MODE: inline {file_path,file_content,commit_message} OR github_file_queue. CORS enabled. PRIMARY deploy mechanism.
+  github-pusher - deprecated
+  run-github-sync - trigger wrapper
+Vault secrets: GITHUB_TOKEN, VERCEL_TOKEN
 
-**Project ID:** qftpohuyvshbvhwxmkvn
- **Region:** ap-southeast-1
-**DB Host:** db.qftpohuyvshbvhwxmkvn.supabase.co
+Key schemas:
+news: id, headline, summary, source_url, source_name, category, relevance_score, published_at, url_hash, post_id(FK->posts nullable)
+posts: id, title, slug, content, excerpt, status, category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at
+social_posts: id, post_id(FK->posts), platform(twitter/linkedin/instagram), content, status(draft/published/failed), platform_post_id
+github_file_queue: id, file_path, file_content(base64), commit_message, status(pending/synced/error), error_message, created_at, synced_at
+users: id(uuid), email, tier(free/lifetime/pro), discord_invited, referral_code, segment, tags[], goal, onboarding_complete
 
-**Edge Functions:**
-- `github-file-syncer` (v4) — queue-based pusher for small files (<10KB)
-- `github-push-file` (v1) — direct push for large files, content in request body
+## 4. Agent Pipeline
+Agent 1 Scout: LIVE | automations/news/scout.py | Every 3h | RSS+Reddit+HN, OpenAI scoring, threshold 65, cap 30/run
+Agent 2 Writer: LIVE | automations/content/write_post.py | Daily 2am UTC | score>=75, last 48h, gpt-4o, full HTML SEO post, published, sets news.post_id
+Agent 3 Publisher: NOT BUILT | automations/content/publish_post.py | Daily 2am UTC after Writer | Discuss with Luke before building - need API creds
+Agent 4 Discord Bot: LIVE | Hetzner VPS | Continuous WebSocket | Veltrix#8512, news every 6h
+Agent 5 Monitor: NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC
 
----
+## 5. Workflows
+scout.yml: cron 0 */3 * * * -> scout.py
+daily.yml: cron 0 2 * * * -> write_post.py (+ publish_post.py when built)
+(planned) weekly.yml: 0 8 * * 2
+(planned) monitor.yml: 0 7 * * 1
 
-**Full details in How-To section below.**
+## 6. Build Plan
+Phase 1 Foundation: DONE
+Phase 2 Content engine: PARTIAL (Scout+Writer live, Publisher not built)
+Phase 3 Live rankings: TODO
+Phase 4 Paywall & community: TODO
+Phase 5 Tool portfolio: TODO
+Phase 6 Support automation: TODO
+Phase 7 Email & newsletter: TODO
+Phase 8 Digital products: TODO
+Phase 9 SEO & growth: TODO
+Phase 10 Monitoring: TODO
 
----
+## 7. Veltix Brand Voice
+Persona: Veltix behind Veltrix Collective (veltrixcollective.com)
+Voice: Authoritative but approachable. First person plural: we track, we tested, our rankings.
+Tone: Slightly irreverent. Never corporate. Never hype. Specific.
+Tagline: weave in naturally: you need AI to keep up with AI
+Avoid: exclamation marks, vague statements, In todays fast-paced world, claiming to be human/Claude
+Always end: CTA to a Veltrix tool or insider paywall
 
-## 4. Table Schemas (unchanged from previous version)
+## 8. AI Models
+gpt-4o-mini: OpenAI, scoring/classification/short summaries, PRIMARY cheap
+gpt-4o: OpenAI, blog posts/newsletters/content, PRIMARY quality
+claude-haiku-4-5-20251001: Anthropic, scoring/short summaries, FALLBACK cheap
+claude-sonnet-4-6: Anthropic, blog posts/newsletters/content, FALLBACK quality
 
----
+## 9. How-To Guides
 
-## 5. Agent Pipeline
+### How-To #1: Pushing files to GitHub from a Claude session
+Problem: Claude bash has no outbound network. GitHub PAT must never appear in chat.
+Solution: github-file-syncer edge function - dual mode.
 
-| Agent | Status | Script | Trigger | Notes |
-|---|---|---|---|---|
-| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | |
-| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC | Picks top unwritten story (score>=75, last 48h), writes full SEO post, saves as published, marks news.post_id |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | Daily 2am UTC | |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous | Veltrix#8512 |
-| Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
-
----
-
-## 11. How-To Guides
-
-These are permanent solutions to problems discovered during sessions. Read before attempting anything similar.
-
----
-
-### How-To #1: Push files to GitHub from a session
-
-**Problem:** Claude sessions have no outbound network access in bash.tool. GITHUB_PAT is a GitHub Actions secret — not accessible in bash or browser JS directly.
-
-**Permanent solution:** Two edge functions handle all pushes:
-- `github-file-syncer` — for small files (<10KB): INSERT into queue table, trigger syncer
-- `github-push-file` — for large files (>10KB): send content directly in request body
-
-Both functions read GITHUB_TOKEN from Supabase vault via `get_github_token()` RPC.
-
-**For small files (<10KB):**
-
-```python
-# Step 1: encode file (bash_tool)
-import base64
-with open('/home/claude/myfile.py', 'rb') as f:
-    enc = base64.b64encode(f.read()).decode()
-```
-
-```sql
--- Step 2: queue the file (via Supabase MCP execute_sql)
-INSERT INTO github_file_queue (file_path, file_content, commit_message, status)
-VALUES ('path/in/repo.py', '<base64>', '[tag] message', 'pending');
-```
-
-```javascript
-// Step 3: trigger the syncer (via browser JS on any veltrixcollective.com tab)
+INLINE MODE (preferred for large/one-off files):
+Run via Claude in Chrome javascript_tool on the veltrixcollective.com tab:
 (async function() {
-  const resp = await fetch('https://qftpohuyvshbvhwxmkvn.supabase.co/functions/v1/github-file-syncer', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+  var c = 'your file content here';
+  var b = btoa(unescape(encodeURIComponent(c)));
+  var r = await fetch('https://qftpohuyvshbvhwxmkvn.supabase.co/functions/v1/github-file-syncer', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({file_path:'path/file.md', file_content:b, commit_message:'[tag] message'})
   });
-  return await resp.text();
+  return await r.text();
 }())
-```
 
-**For large files (>10KB, e.g. PROJECT_STATE.md):**
+QUEUE MODE (for multiple files or binary):
+1. base64 encode: python3 -c "import base64; print(base64.b64encode(open('f','rb').read()).decode())"
+2. INSERT INTO github_file_queue (file_path, file_content, commit_message, status) VALUES (..., 'pending')
+3. Trigger: call edge function with body {} from browser using same javascript_tool pattern
 
-```javascript
-// Call github-push-file directly from browser JS
+Notes: edge fn fetches GITHUB_TOKEN from vault via get_github_token() RPC - no token in request ever
+btoa(unescape(encodeURIComponent(content))) handles UTF-8 correctly in browser
+
+### How-To #2: Accessing secrets from Supabase vault in edge functions
+Problem: Need secrets without hardcoding or passing in requests.
+Solution: Vault + SECURITY DEFINER SQL function + RPC call.
+
+Step 1 - Create accessor (Supabase:apply_migration):
+CREATE OR REPLACE FUNCTION get_my_secret() RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$ SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'MY_SECRET' LIMIT 1; $$;
+
+Step 2 - Call from edge function:
+const r = await fetch(supabaseUrl+'/rest/v1/rpc/get_my_secret', {method:'POST', headers:{apikey:serviceKey, Authorization:'Bearer '+serviceKey, 'Content-Type':'application/json'}, body:'{}'});
+const secret = await r.json(); // returns string directly
+
+Existing: GITHUB_TOKEN (get_github_token()), VERCEL_TOKEN
+Gotchas: vault.decrypted_secrets NOT via JS .from() - RPC only. pg_net NOT installed. vault_decrypted_secret() built-in does NOT exist.
+
+### How-To #3: Calling a Supabase Edge Function from a Claude session
+Problem: Claude bash has no outbound network.
+Solution: javascript_tool on veltrixcollective.com tab.
+
 (async function() {
-  const resp = await fetch('https://qftpohuyvshbvhwxmkvn.supabase.co/functions/v1/github-push-file', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      path: 'PROJECT_STATE.md',
-      content_base64: '<base64_content>',
-      message: '[milestone] update description'
-    })
+  var r = await fetch('https://qftpohuyvshbvhwxmkvn.supabase.co/functions/v1/YOUR-FN', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
   });
-  return await resp.text();
+  return await r.text();
 }())
-```
 
-**Notes:**
-- The syncer handles file existence check (gets SHA for updates automatically)
-- Always verify push succeeded by checking returned JSON for `"ok":true`
-- The veltrixcollective.com tab must be open
-
----
-
-### How-To #2: Access secrets from a session
-
-**Problem:** Secrets must never appear in chat. GitHub Actions secrets are not accessible outside of workflows.
-
-**Permanent solution:** Supabase vault + SECURITY DEFINER SQL function pattern.
-
-**Currently stored in vault:**
-- `GITHUB_TOKEN` — accessed via `get_github_token()` RPC
-- `VERCEL_TOKEN` — add similar RPC if needed
-
-**To add a new secret:**
-```sql
-SELECT vault.create_secret('your-secret-value', 'SECRET_NAME');
-CREATE OR REPLACE FUNCTION get_my_secret()
-RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
-SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'SECRET_NAME' LIMIT 1;
-$$;
-```
-
-**To read in edge function:**
-```typescript
-const tokenResp = await fetch(`${supabaseUrl}/rest/v1/rpc/get_github_token`, {
-  method: 'POST',
-  headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-  body: '{}',
-});
-const token = await tokenResp.json();
-```
-
----
-
-### How-To #3: Trigger an edge function from a session
-
-**Problem:** bash_tool has no outbound network. Supabase MCP has no HTTP call capability.
-
-**Solution:** Use `Claude in Chrome:javascript_tool` on the open veltrixcollective.com tab.
-
-```javascript
-(async function() {
-  try {
-    const resp = await fetch('https://qftpohuyvshbvhwxmkvn.supabase.co/functions/v1/FUNCTION-NAME', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: 'value' })
-    });
-    return await resp.text();
-  } catch(e) { return { error: e.message }; }
-}())
-```
-
-**Requirements:**
-- Edge function must have CORS headers (`Access-Control-Allow-Origin: *`)
-- `verify_jwt: false` must be set on the edge function
-
----
-
-### How-To #4: Add a new GitHub Actions secret
-
-**This cannot be automated** — GitHub Actions secrets can only be added via the GitHub UI or GitHub API with a PAT that has `secrets:write` scope.
-
-**Manual steps for Luke:**
-1. Go to https://github.com/LukeJMadden/veltrix-collective/settings/secrets/actions
-2. Click "New repository secret"
-3. Add the secret with the exact name documented in PROJECT_STATE.md Section 2
-4. Tell Claude "secret X is added"
-
----
+Requirements: edge fn MUST have CORS headers. Deploy with verify_jwt:false. Wrap in async IIFE. Use veltrixcollective.com tab (not newtab).
 
 *Veltrix Collective - Built by AI. Curated by Veltix. Owned by you.*
