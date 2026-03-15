@@ -1,5 +1,5 @@
 # Veltrix Collective — Project State
-> **Last updated:** 2026-03-15
+> **Last updated:** 2026-03-16
 > This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
 
 ---
@@ -142,15 +142,9 @@ Private (no policy = locked): automation_logs, discord_logs, goal_checkins, refe
 Public READ: news, posts (published only), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters  
 Public INSERT: tool_votes
 
-**DB Functions (all hardened with SET search_path = public):**
+**DB Functions (both hardened with SET search_path = public):**
 - increment_tool_votes(p_tool_id integer)
 - increment_referral_count(referrer_code text)
-- get_github_token() — reads GITHUB_TOKEN from vault.decrypted_secrets (SECURITY DEFINER)
-
-**Supabase Edge Functions:**
-- github-file-syncer — reads github_file_queue (pending rows), pushes to GitHub via vault token, marks synced. Call to deploy any file to GitHub repo. Has CORS headers.
-- github-pusher — accepts files + token directly in request body (older version, prefer github-file-syncer)
-- run-github-sync — one-shot trigger wrapper for github-file-syncer
 
 ---
 
@@ -160,13 +154,10 @@ Public INSERT: tool_votes
 id (uuid PK), email (unique), tier (free/lifetime/pro), discord_invited, discord_username, lemon_squeezy_order_id, referral_code (auto 8-char unique), referred_by, referral_count, referral_reward_tier, last_active, email_open_count, email_click_count, tool_usage_count, page_view_count, segment, tags[], goal, goal_check_count, last_goal_check, lead_magnet_delivered, lead_magnet_version, onboarding_step, onboarding_complete, created_at
 
 ### news
-id (serial PK), headline, summary (Veltix-voice 3-sentence), source_url, source_name, category (default: ai-general), relevance_score (0-100), published_at, created_at, url_hash (unique 12-char SHA256 for dedup), post_id (FK->posts nullable — set when story has been written into a post)
+id (serial PK), headline, summary (Veltix-voice 3-sentence), source_url, source_name, category (default: ai-general), relevance_score (0-100), published_at, created_at, url_hash (unique 12-char SHA256 for dedup)
 
 ### posts
 id, title, slug (unique), content, excerpt, status (draft/published), category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at, created_at, updated_at
-
-### social_posts
-id, post_id (FK->posts), platform (twitter/linkedin/instagram), content, status (draft/published/failed), platform_post_id
 
 ### tools
 id, name, slug (unique), url, category (claude-tools/llm/image/productivity/writing), description, score, votes, affiliate_url, is_veltrix_tool (Veltrix Pick badge), featured, logo_url, pricing_model (free/freemium/paid), monthly_price_usd, tags[], updated_at, created_at
@@ -189,15 +180,14 @@ id, referrer_code, referred_email, referred_user_id (FK->users), status (pending
 ### tool_comparisons
 id, tool_a_id (FK->tools), tool_b_id (FK->tools), slug (unique e.g. chatgpt-vs-claude), content, meta_description, view_count
 
+### social_posts
+id, post_id (FK->posts), platform (twitter/linkedin/instagram), content, status (draft/published), platform_post_id
+
 ### faq_items
 id, question, answer, times_asked, approved
 
 ### support_logs / discord_logs / automation_logs
 Backend-only logging tables. No RLS policy. See Supabase for full columns.
-
-### github_file_queue
-id, file_path, file_content (base64), commit_message, status (pending/synced/error), error_message, created_at, synced_at
-**Usage:** INSERT rows here, then call github-file-syncer edge function to push to repo.
 
 ---
 
@@ -206,8 +196,8 @@ id, file_path, file_content (base64), commit_message, status (pending/synced/err
 | Agent | Status | Script | Trigger | Notes |
 |---|---|---|---|---|
 | Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC (daily.yml) | Picks top unwritten story (score>=75, last 48h), writes full SEO post in Veltix voice, saves to posts as published. Marks news.post_id. |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new published post | Posts directly to social APIs — no Buffer needed |
+| Agent 2: Writer | NOT BUILT | automations/content/write_post.py | Daily 2am UTC | |
+| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs — no Buffer needed |
 | Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on — that's why it's on VPS not Actions. |
 | Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
 
@@ -221,12 +211,6 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 - Reddit: uses /r/{sub}/new.rss (NOT JSON API — returns 403)
 - Dedup: url_hash (SHA256 12-char)
 
-### Writer detail
-- Model: gpt-4o (quality=True) with claude-sonnet-4-6 fallback
-- Threshold: relevance_score >= 75, last 48h, post_id IS NULL
-- Output: full HTML blog post, SEO fields, published immediately
-- Dedup: sets news.post_id after writing to prevent rewrites
-
 ---
 
 ## 6. GitHub Actions Workflows
@@ -234,7 +218,7 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 | File | Cron | Runs |
 |---|---|---|
 | .github/workflows/scout.yml | 0 */3 * * * | automations/news/scout.py |
-| .github/workflows/daily.yml | 0 2 * * * | Writer (+ Publisher when built) |
+| (planned) daily.yml | 0 2 * * * | Writer + Publisher |
 | (planned) weekly.yml | 0 8 * * 2 | Newsletter |
 | (planned) monitor.yml | 0 7 * * 1 | Monitor report |
 
@@ -250,10 +234,9 @@ veltrix-collective/
 │   │   ├── scout.py               LIVE
 │   │   └── requirements.txt
 │   ├── content/
-│   │   ├── write_post.py          LIVE
-│   │   ├── publish_post.py        PLANNED
+│   │   ├── write_post.py          PLANNED
 │   │   ├── write_social.py        PLANNED
-│   │   └── requirements.txt       LIVE
+│   │   └── publish_post.py        PLANNED
 │   ├── email/
 │   │   ├── send_newsletter.py     PLANNED
 │   │   └── send_goal_checkins.py  PLANNED
@@ -263,9 +246,10 @@ veltrix-collective/
 │   │   └── triage_support.py      PLANNED
 │   └── monitor/
 │       └── weekly_report.py       PLANNED
+├── tools/                         PLANNED (Phase 5)
 ├── .github/workflows/
 │   ├── scout.yml                  LIVE
-│   ├── daily.yml                  LIVE
+│   ├── daily.yml                  PLANNED
 │   ├── weekly.yml                 PLANNED
 │   └── monitor.yml                PLANNED
 └── PROJECT_STATE.md               THIS FILE
@@ -302,7 +286,7 @@ Always end with a CTA to a Veltrix tool or the insider paywall.
 | Phase | Status | Summary |
 |---|---|---|
 | Phase 1 - Foundation | DONE | VPS, Supabase, Vercel, repo, all services live |
-| Phase 2 - Content engine | PARTIAL | Scout + Writer live; Publisher not built |
+| Phase 2 - Content engine | PARTIAL | Scout live; Writer/Publisher not built |
 | Phase 3 - Live rankings | TODO | Tools leaderboard, LLM page |
 | Phase 4 - Paywall & community | TODO | Lemon Squeezy set up; guides page + Discord roles not built |
 | Phase 5 - Tool portfolio | TODO | Matchmaker, LLM Tester, News Summariser |
@@ -311,6 +295,56 @@ Always end with a CTA to a Veltrix tool or the insider paywall.
 | Phase 8 - Digital products | TODO | AI Video Prompt Pack + 4 others. Gumroad account ready. |
 | Phase 9 - SEO & growth | TODO | Programmatic compare pages |
 | Phase 10 - Monitoring | TODO | Weekly report script |
+
+---
+
+## 11. How-To: Composio MCP for Claude Desktop (Windows)
+
+### Overview
+Composio MCP connects Claude Desktop to 500+ tools (GitHub, Notion, Supabase, Vercel, Brevo, Twitter, Zoho, etc.) via a single MCP server. The MCP URL is permanent per project — it does not change when you reconnect.
+
+### Initial Setup
+1. Go to platform.composio.dev → your project → MCP Configs
+2. Copy your MCP URL (format: `https://backend.composio.dev/v3/mcp/{uuid}/mcp?user_id={user_id}`)
+3. Get your Composio API key from platform.composio.dev → Settings → API Keys
+4. Run the setup command:
+```powershell
+npx @composio/mcp@latest setup "YOUR_MCP_URL" "mcp-config-hxmhed" --client claude
+```
+
+### Fix: "401 after successful authentication" (broken OAuth loop)
+The `mcp-remote` OAuth flow is broken on Composio's platform as of March 2026. The setup command installs correctly but Claude Desktop fails with `Server returned 401 after successful authentication` in a loop.
+
+**Fix: bypass OAuth entirely by passing your API key as a header.**
+
+Edit `%APPDATA%\Claude\claude_desktop_config.json` and add `--header` to the args:
+
+```json
+{
+  "mcpServers": {
+    "mcp-config-hxmhed": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "YOUR_FULL_MCP_URL_HERE",
+        "--header",
+        "x-api-key:YOUR_COMPOSIO_API_KEY"
+      ],
+      "env": {
+        "npm_config_yes": "true"
+      }
+    }
+  }
+}
+```
+
+Find your API key at: platform.composio.dev → Settings → API Keys
+
+Fully quit Claude (system tray → Quit) and restart after saving. The MCP server should connect without any OAuth browser window.
+
+### Verifying Connection
+In a new Claude session, the Composio tools will be available. You can test by asking Claude to use any connected tool (GitHub, Notion, Supabase, etc.).
 
 ---
 
