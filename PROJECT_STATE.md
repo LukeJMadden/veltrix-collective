@@ -1,230 +1,105 @@
-# Veltrix Collective ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ Project State
-> **Last updated:** 2026-03-15 (Agent 3 updated Ã¢ÂÂ LinkedIn personal voice + Brevo email)
-> This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
+# Veltrix Collective — Project State
+> **Last updated:** 2026-03-15
+> This file is the single source of truth. Update it every time a new agent, script, integration, or schema change is deployed.
 
 ---
 
-## 1. Services & Credentials
+## 0. AI Session Start Checklist
 
-### Hosting & Infrastructure
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ persistent process | Live | IP: 5.161.89.154 |
-| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ DNS points to Vercel |
-| **Tailscale** | VPN | Not in use | Set up for separate project. Not needed for Veltrix. |
-
-### AI & APIs
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **OpenAI** | PRIMARY AI ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ all writing, content, scoring | Active | Use until ~$100 credits exhausted |
-| **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
-
-### Database
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Supabase** | Primary database | Live | Project ID: qftpohuyvshbvhwxmkvn, Region: ap-southeast-1 |
-
-### Email
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ support inbox + Brevo sender address |
-
-### Payments
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ updates users.tier + triggers Discord invite |
-
-### Community
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Discord** | Community hub | Live | Bot: Veltrix#8512. Posts news every 6h. Auto-restarts on Hetzner VPS. |
-| **Telegram** | Publisher bot + interactive commands | Live | Bot: @VeltrixPublisherV2_bot. Webhook: https://www.veltrixcollective.com/api/telegram-webhook. Handles /start, /help, /tools, /latest, /about + natural language. IMPORTANT: webhook must use www subdomain (no-www redirects with 307). |
-
-### Source Control
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **GitHub** | Repo + CI/CD | Live | Actions secrets in Settings -> Secrets -> Actions |
+> At the start of EVERY session:
+> 1. Read this file fully
+> 2. Retrieve tokens — NEVER ask the user to paste them:
+>    SELECT name, decrypted_secret FROM vault.decrypted_secrets ORDER BY name;
+>    Returns GITHUB_TOKEN and VERCEL_TOKEN.
+> 3. Use exact variable names from this file.
+>
+> CRITICAL: Telegram webhook must use www: https://www.veltrixcollective.com/api/telegram-webhook
+> Non-www 307-redirects and Telegram does not follow redirects.
 
 ---
 
-## 2. Environment Variables
+## 1. Services
 
-> ⚠️ **TOKEN SOURCE OF TRUTH — READ BEFORE EVERY SESSION**
-> All secrets are stored in Supabase Vault AND Vercel Dashboard.
-> 
-> **How to retrieve tokens at the start of any AI session (no user input needed):**
-> ```sql
-> SELECT name, decrypted_secret FROM vault.decrypted_secrets ORDER BY name;
-> ```
-> This returns all available tokens including GITHUB_TOKEN and VERCEL_TOKEN.
-> Use GITHUB_TOKEN for all GitHub API calls (push files, update PROJECT_STATE.md etc).
-> Use VERCEL_TOKEN to call the Vercel API if needed.
->
-> **Never ask the user to paste tokens in chat. Always pull from Supabase vault first.**
->
-> Current secrets in Supabase vault: GITHUB_TOKEN, VERCEL_TOKEN
-> Full list in Vercel Dashboard → Settings → Environment Variables:
-> GITHUB_TOKEN, VERCEL_TOKEN, TELEGRAM_BOT_TOKEN, SUPABASE_SERVICE_KEY, TELEGRAM_CHAT_ID,
-> NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_ANON_KEY,
-> ANTHROPIC_API_KEY, OPENAI_API_KEY, BREVO_API_KEY, LEMON_SQUEEZY_API_KEY,
-> LEMON_SQUEEZY_STORE_ID, LEMON_SQUEEZY_WEBHOOK_SECRET, NEXT_PUBLIC_LEMON_SQUEEZY_CHECKOUT_URL,
-> DISCORD_INVITE_URL, NEXT_PUBLIC_SITE_URL
+| Service | Purpose | Status | Key Details |
+|---|---|---|---|
+| Hetzner VPS | Discord bot | Live | IP: 5.161.89.154 |
+| Vercel | Next.js frontend | Live | Auto-deploys from GitHub main |
+| Namecheap | Domain | Live | veltrixcollective.com |
+| Supabase | Database | Live | Project ID: qftpohuyvshbvhwxmkvn, Region: ap-southeast-1 |
+| OpenAI | PRIMARY AI | Active | gpt-4o / gpt-4o-mini |
+| Anthropic | FALLBACK AI | Active | claude-sonnet-4-6 / claude-haiku-4-5-20251001 |
+| Brevo | Email + newsletters | Set up | API configured |
+| Zoho | Custom inbox | Live | hello@veltrixcollective.com |
+| Lemon Squeezy | Payments | Set up | Webhook: /api/activate-member |
+| Discord | Community | Live | Veltrix#8512, posts news every 6h, Hetzner VPS |
+| Telegram | Bot | Live | @VeltrixPublisherV2_bot, webhook on www subdomain |
+| GitHub | Repo + CI/CD | Live | Actions secrets in Settings |
 
-### Vercel Dashboard
-| Variable | Purpose |
-|---|---|
-| NEXT_PUBLIC_SUPABASE_URL | Supabase URL (public) |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anon key (frontend, RLS enforced) |
-| SUPABASE_ANON_KEY | Supabase anon key (server-side API routes) |
-| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ bypasses RLS) |
-| ANTHROPIC_API_KEY | Claude API (fallback) |
-| OPENAI_API_KEY | OpenAI API (primary) |
-| BREVO_API_KEY | Brevo email |
-| LEMON_SQUEEZY_API_KEY | Lemon Squeezy |
-| LEMON_SQUEEZY_STORE_ID | Lemon Squeezy store ID |
-| LEMON_SQUEEZY_WEBHOOK_SECRET | Webhook verification |
-| NEXT_PUBLIC_LEMON_SQUEEZY_CHECKOUT_URL | Checkout URL for frontend |
-| DISCORD_INVITE_URL | Sent to users on purchase |
-| NEXT_PUBLIC_SITE_URL | https://veltrixcollective.com |
+---
 
-### GitHub Actions Secrets
-> IMPORTANT: These names differ slightly from Vercel. Always use exact names below in .yml files.
+## 2. Tokens & Environment Variables
 
-| Secret Name | Python env key | Purpose |
-|---|---|---|
-| ANTHROPIC_API_KEY | os.environ["ANTHROPIC_API_KEY"] | Claude fallback |
-| OPENAI_API_KEY | os.environ["OPENAI_API_KEY"] | OpenAI primary |
-| BREVO_API_KEY | os.environ["BREVO_API_KEY"] | Brevo email |
-| LEMON_SQUEEZY_API_KEY | os.environ["LEMON_SQUEEZY_API_KEY"] | Lemon Squeezy |
-| LEMON_SQUEEZY_WEBHOOK_SECRET | os.environ["LEMON_SQUEEZY_WEBHOOK_SECRET"] | Webhook verify |
-| NEXT_PUBLIC_SUPABASE_URL | os.environ["SUPABASE_URL"] | Supabase URL |
-| SUPABASE_SERVICE_ROLE_KEY | os.environ["SUPABASE_SERVICE_KEY"] | Supabase writes |
-| X_API_KEY | os.environ.get("X_API_KEY") | X/Twitter API key (add when ready to post) |
-| X_API_SECRET | os.environ.get("X_API_SECRET") | X/Twitter API secret |
-| X_ACCESS_TOKEN | os.environ.get("X_ACCESS_TOKEN") | X/Twitter access token |
-| X_ACCESS_SECRET | os.environ.get("X_ACCESS_SECRET") | X/Twitter access secret |
-| LINKEDIN_ACCESS_TOKEN | os.environ.get("LINKEDIN_ACCESS_TOKEN") | LinkedIn OAuth token (add when ready) |
-| LINKEDIN_PERSON_URN | os.environ.get("LINKEDIN_PERSON_URN") | LinkedIn person URN e.g. ABC123 |
+> ALL secrets in Supabase vault AND Vercel dashboard.
+> Retrieve in any session: SELECT name, decrypted_secret FROM vault.decrypted_secrets ORDER BY name;
+> Vault contains: GITHUB_TOKEN, VERCEL_TOKEN
+> NEVER ask the user to paste tokens.
 
-### LinkedIn strategy
-LinkedIn API automation for personal accounts requires OAuth app review, 60-day token refresh cycles, and is high-risk for personal brand. Instead:
-- Publisher generates LinkedIn caption in Luke's personal voice (AI practitioner / thought leader tone)
-- Caption saved as draft to social_posts table
-- Caption emailed to hello@veltrixcollective.com via Brevo each morning
-- Luke reviews, edits final line if needed, posts manually (30 seconds)
-- Veltrix mention rotates: 60% no mention, 25% subtle reference, 15% with link
-- If LinkedIn API is added in future: add LINKEDIN_ACCESS_TOKEN + LINKEDIN_PERSON_URN secrets Ã¢ÂÂ Publisher will auto-detect and switch to live posting
+Full Vercel env var list: GITHUB_TOKEN, VERCEL_TOKEN, TELEGRAM_BOT_TOKEN, SUPABASE_SERVICE_KEY, TELEGRAM_CHAT_ID, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, BREVO_API_KEY, LEMON_SQUEEZY_API_KEY, LEMON_SQUEEZY_STORE_ID, LEMON_SQUEEZY_WEBHOOK_SECRET, NEXT_PUBLIC_LEMON_SQUEEZY_CHECKOUT_URL, DISCORD_INVITE_URL, NEXT_PUBLIC_SITE_URL
 
-### Standard .yml env block (copy into every workflow)
-```yaml
-env:
-  SUPABASE_URL:                 ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-  SUPABASE_SERVICE_KEY:         ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  ANTHROPIC_API_KEY:            ${{ secrets.ANTHROPIC_API_KEY }}
-  OPENAI_API_KEY:               ${{ secrets.OPENAI_API_KEY }}
-  BREVO_API_KEY:                ${{ secrets.BREVO_API_KEY }}
-  LEMON_SQUEEZY_API_KEY:        ${{ secrets.LEMON_SQUEEZY_API_KEY }}
-  LEMON_SQUEEZY_WEBHOOK_SECRET: ${{ secrets.LEMON_SQUEEZY_WEBHOOK_SECRET }}
-```
+GitHub Actions secrets (differ from Vercel names):
+SUPABASE_SERVICE_ROLE_KEY -> os.environ["SUPABASE_SERVICE_KEY"]
+NEXT_PUBLIC_SUPABASE_URL -> os.environ["SUPABASE_URL"]
 
-### Standard Python env reads (copy into every script)
-```python
-import os
-SUPABASE_URL  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
-OPENAI_KEY    = os.environ["OPENAI_API_KEY"]
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
-BREVO_KEY     = os.environ["BREVO_API_KEY"]
-LS_API_KEY    = os.environ["LEMON_SQUEEZY_API_KEY"]
-```
-
-### Standard AI call pattern ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ OpenAI PRIMARY, Claude FALLBACK
-```python
-import openai, anthropic, logging
-log = logging.getLogger(__name__)
-
-def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
-    openai_model    = "gpt-4o"           if quality else "gpt-4o-mini"
-    anthropic_model = "claude-sonnet-4-6" if quality else "claude-haiku-4-5-20251001"
-    try:
-        client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        resp = client.chat.completions.create(
-            model=openai_model, max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return resp.choices[0].message.content
-    except Exception as e:
-        log.warning(f"OpenAI failed ({e}), falling back to Anthropic")
-        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        msg = client.messages.create(
-            model=anthropic_model, max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return msg.content[0].text
-```
+Standard AI call pattern — OpenAI PRIMARY, Claude FALLBACK:
+openai_model = "gpt-4o" if quality else "gpt-4o-mini"
+anthropic_model = "claude-sonnet-4-6" if quality else "claude-haiku-4-5-20251001"
 
 ---
 
 ## 3. Supabase
 
-**Project ID:** qftpohuyvshbvhwxmkvn  
-**Region:** ap-southeast-1  
-**DB Host:** db.qftpohuyvshbvhwxmkvn.supabase.co  
-**Postgres:** 17.6
+Project ID: qftpohuyvshbvhwxmkvn | Region: ap-southeast-1 | Postgres: 17.6
 
-**RLS:** All tables enabled.  
-Private (no policy = locked): automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs  
-Public READ: news, posts (published only), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters  
+RLS: All tables enabled.
+Private: automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs, ab_tests, evolution_log
+Public READ: news, posts (published), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters
 Public INSERT: tool_votes
 
-**DB Functions (both hardened with SET search_path = public):**
-- increment_tool_votes(p_tool_id integer)
-- increment_referral_count(referrer_code text)
+DB Functions: increment_tool_votes(p_tool_id integer), increment_referral_count(referrer_code text)
 
 ---
 
 ## 4. Table Schemas
 
-### users
-id (uuid PK), email (unique), tier (free/lifetime/pro), discord_invited, discord_username, lemon_squeezy_order_id, referral_code (auto 8-char unique), referred_by, referral_count, referral_reward_tier, last_active, email_open_count, email_click_count, tool_usage_count, page_view_count, segment, tags[], goal, goal_check_count, last_goal_check, lead_magnet_delivered, lead_magnet_version, onboarding_step, onboarding_complete, created_at
+users: id, email, tier(free/lifetime/pro), discord_invited, discord_username, lemon_squeezy_order_id, referral_code, referred_by, referral_count, referral_reward_tier, referral_month_count, referral_month_reset_date, last_active, email_open_count, email_click_count, tool_usage_count, page_view_count, segment, tags[], role(developer/teacher/executive/founder/other), goal, goal_check_count, last_goal_check, lead_magnet_delivered, lead_magnet_version, onboarding_step, onboarding_complete, created_at
 
-### news
-id (serial PK), headline, summary (Veltix-voice 3-sentence), source_url, source_name, category (default: ai-general), relevance_score (0-100), published_at, created_at, url_hash (unique 12-char SHA256 for dedup)
+news: id(serial), headline, summary, source_url, source_name, category, relevance_score(0-100), published_at, created_at, url_hash(unique 12-char SHA256)
 
-### posts
-id, title, slug (unique), content, excerpt, status (draft/published), category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at, created_at, updated_at
+posts: id, title, slug(unique), content, excerpt, status(draft/published), category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at, created_at, updated_at
 
-### tools
-id, name, slug (unique), url, category (claude-tools/llm/image/productivity/writing), description, score, votes, affiliate_url, is_veltrix_tool (Veltrix Pick badge), featured, logo_url, pricing_model (free/freemium/paid), monthly_price_usd, tags[], updated_at, created_at
+tools: id, name, slug(unique), url, category, description, score, votes, affiliate_url, is_veltrix_tool, featured, logo_url, pricing_model(free/freemium/paid), monthly_price_usd, tags[], updated_at, created_at
 
-### tool_votes
-id, tool_id (FK->tools), ip_hash, user_id (FK->users nullable), voted_at
+tool_votes: id, tool_id(FK->tools), ip_hash, user_id(FK->users nullable), voted_at
 
-### llm_rankings
-id, model_name, provider, slug (unique), score_overall/coding/reasoning/creativity/speed/cost_efficiency, context_window, input_cost_per_1m, output_cost_per_1m, api_url, affiliate_url, notes, updated_at
+llm_rankings: id, model_name, provider, slug(unique), score_overall/coding/reasoning/creativity/speed/cost_efficiency, context_window, input_cost_per_1m, output_cost_per_1m, api_url, affiliate_url, notes, updated_at
 
-### products
-id, title, slug (unique), description, price_usd, product_type (prompt-pack/guide/pdf), lemon_squeezy_product_id, gumroad_product_id, pdf_url, preview_url, sales_count, active
+products: id, title, slug(unique), description, price_usd, product_type(prompt-pack/guide/pdf), lemon_squeezy_product_id, gumroad_product_id, pdf_url, preview_url, sales_count, active
 
-### newsletters
-id, subject, content_html (free), content_premium_html (lifetime), status (draft/sent), recipient_count, open_count, click_count, sent_at
+newsletters: id, subject, content_html(free), content_premium_html(paid), status(draft/sent), recipient_count, open_count, click_count, sent_at
 
-### referrals
-id, referrer_code, referred_email, referred_user_id (FK->users), status (pending/confirmed), reward_type
+referrals: id, referrer_code, referred_email, referred_user_id(FK->users), status(pending/confirmed), reward_type, confirmed_at
 
-### tool_comparisons
-id, tool_a_id (FK->tools), tool_b_id (FK->tools), slug (unique e.g. chatgpt-vs-claude), content, meta_description, view_count
+tool_comparisons: id, tool_a_id, tool_b_id, slug(unique e.g. chatgpt-vs-claude), content, meta_description, view_count
 
-### social_posts
-id, post_id (FK->posts), platform (twitter/linkedin/instagram), content, status (draft/published), platform_post_id
+social_posts: id, post_id(FK->posts), platform(twitter/linkedin/instagram/medium/youtube), content, status(draft/published/scheduled), platform_post_id, scheduled_at
 
-### faq_items
-id, question, answer, times_asked, approved
+faq_items: id, question, answer, times_asked, approved
 
-### support_logs / discord_logs / automation_logs
-Backend-only logging tables. No RLS policy. See Supabase for full columns.
+ab_tests: id, hypothesis, variant_a, variant_b, page_slug, metric, status(proposed/approved/running/complete), approved_at, start_date, end_date, result_winner, result_data(jsonb), created_at
+
+evolution_log: id, action_type(autonomous/proposed/approved/rejected), description, reasoning, impact_estimate, stakes_level(low/medium/high), approved_by, executed_at, result, created_at
+
+support_logs / discord_logs / automation_logs: Backend-only logging tables.
 
 ---
 
@@ -232,21 +107,19 @@ Backend-only logging tables. No RLS policy. See Supabase for full columns.
 
 | Agent | Status | Script | Trigger | Notes |
 |---|---|---|---|---|
-| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | LIVE ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ | automations/content/write_post.py | Daily 2am UTC (GitHub Actions) | OpenAI gpt-4o primary, Claude fallback. Picks highest-scoring news item not yet written, generates ~900-word SEO post in Veltix voice, saves as draft to posts table. Verified working 2026-03-14. |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ no Buffer needed |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ that's why it's on VPS not Actions. |
-| Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
+| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h | RSS + Reddit RSS + HN. Scores with OpenAI. |
+| Agent 2: Writer | NOT BUILT | automations/content/write_post.py | Daily 2am UTC | Outputs to site + queues for Agent 3 |
+| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | X, LinkedIn, Medium, YouTube simultaneously |
+| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous | Veltrix#8512. Posts news every 6h. Always-on VPS. |
+| Agent 5: Telegram Bot | LIVE | site/app/api/telegram-webhook/route.js | Real-time | @VeltrixPublisherV2_bot. www subdomain critical. |
+| Agent 6: SEO | NOT BUILT | automations/seo/seo_agent.py | Weekly | Compare pages, meta tags, internal links, keyword gaps |
+| Agent 7: Newsletter | NOT BUILT | automations/email/send_newsletter.py | Weekly | Segmented by role, dynamic Brevo content blocks |
+| Agent 8: Sales Monitor | NOT BUILT | automations/sales/sales_monitor.py | Daily | Watches conversion, auto-triggers LS discounts |
+| Agent 9: AB Tester | NOT BUILT | automations/abtests/ab_agent.py | On approval | Runs tests, reports results, proposes winner |
+| Agent 10: Evolution | NOT BUILT | automations/monitor/evolution_agent.py | Daily/Weekly | Metrics, proposals, autonomous low-stakes actions |
 
-**Why Discord bot is on Hetzner and not GitHub Actions:**
-Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
-
-### Scout detail
-- Model: gpt-4o-mini (OpenAI primary) with claude-haiku-4-5-20251001 fallback
-- Threshold: 65/100. Lookback: 4h. Cap: 30/run.
-- Sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI (RSS) + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs (Reddit RSS) + HN
-- Reddit: uses /r/{sub}/new.rss (NOT JSON API ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ returns 403)
-- Dedup: url_hash (SHA256 12-char)
+Scout sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs + HN
+Scout config: Threshold 65/100. Lookback 4h. Cap 30/run. Reddit uses /r/{sub}/new.rss (NOT JSON API). Dedup: url_hash SHA256 12-char.
 
 ---
 
@@ -254,85 +127,96 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 
 | File | Cron | Runs |
 |---|---|---|
-| .github/workflows/scout.yml | 0 */3 * * * | automations/news/scout.py |
-| .github/workflows/daily.yml | 0 2 * * * | automations/content/write_post.py |
-| (planned) weekly.yml | 0 8 * * 2 | Newsletter |
-| (planned) monitor.yml | 0 7 * * 1 | Monitor report |
+| scout.yml | 0 */3 * * * | scout.py |
+| daily.yml (planned) | 0 2 * * * | Writer + Publisher |
+| weekly.yml (planned) | 0 8 * * 2 | Newsletter + SEO |
+| sales.yml (planned) | 0 9 * * * | Sales monitor |
+| monitor.yml (planned) | 0 7 * * 1 | Evolution agent |
 
 ---
 
-## 7. Repo Structure
+## 7. Veltix Brand Voice
 
-```
-veltrix-collective/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ site/                          # Next.js (Vercel)
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ automations/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ news/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ scout.py               LIVE
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ requirements.txt
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ content/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ write_post.py          PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ write_social.py        PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ publish_post.py        PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ email/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ send_newsletter.py     PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ send_goal_checkins.py  PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ rankings/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ update_rankings.py     PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ support/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ triage_support.py      PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ monitor/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ       ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ weekly_report.py       PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ tools/                         PLANNED (Phase 5)
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ .github/workflows/
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ scout.yml                  LIVE
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ daily.yml                  PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ weekly.yml                 PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ   ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ monitor.yml                PLANNED
-ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ PROJECT_STATE.md               THIS FILE
-```
+Authoritative but approachable. First person: "we track", "we tested", "our rankings".
+Slightly irreverent. Never corporate. Never hype. Specific about what matters.
+Tagline: "you need AI to keep up with AI" — weave in naturally.
+Avoid: exclamation marks, vague statements, "In today's fast-paced world", claiming to be human or Claude.
+Always end with CTA to a Veltrix tool or insider paywall.
+Journey posts: Self-aware, dry, sardonic. References own metrics and agent statuses. Include last 3-5 posts as context for continuity.
 
 ---
 
-## 8. AI Model Reference
+## 8. Insider Program & Monetisation
 
-| Model | Provider | Use for | Priority |
-|---|---|---|---|
-| gpt-4o-mini | OpenAI | Scoring, classification, short summaries | PRIMARY cheap |
-| gpt-4o | OpenAI | Blog posts, newsletters, content | PRIMARY quality |
-| claude-haiku-4-5-20251001 | Anthropic | Scoring, short summaries | FALLBACK cheap |
-| claude-sonnet-4-6 | Anthropic | Blog posts, newsletters, content | FALLBACK quality |
+Free tier (always free): Weekly newsletter, tools directory, LLM rankings, CLAUDE.md generator, public guides, top 10 prompts.
 
----
+Insider tier (paid): Full prompt library, extended newsletter with role section, submit questions, templates vault, Discord (200+), live Q&A (500+), role tracks (1000+).
 
-## 9. Veltix Brand Voice
+Milestone bar (show on homepage at 150+ insiders):
+100 = founding price locked | 200 = Discord opens | 500 = live Q&A | 1000 = role tracks | 2000 = price increase | 5000 = community contributions | 10000 = productised tools
 
-```
-You are Veltix, the AI persona behind Veltrix Collective (veltrixcollective.com).
-Voice: Authoritative but approachable. First person. "we track", "we tested", "our rankings".
-Tone: Slightly irreverent. Never corporate. Never hype. Specific about what matters.
-Tagline: Occasionally weave in "you need AI to keep up with AI" naturally.
-Avoid: Excessive exclamation marks. Vague statements. "In todays fast-paced world". Claiming to be human or Claude.
-Always end with a CTA to a Veltrix tool or the insider paywall.
-```
+Referral: 10 paid referrals in a calendar month = that month free. Via Lemon Squeezy pause API (mode:free + resumes_at). Cent-based discounts not supported cleanly by LS — avoided.
+
+Sales automation: Monitor conversion daily. 3 consecutive days below threshold = auto-trigger time-limited LS discount. Seasonal sales pre-configured.
 
 ---
 
-## 10. Build Plan Status
+## 9. Autonomy Model
+
+Fully autonomous (no approval): SEO updates, adding tools to directory, social posts, metrics logging, running sales within pre-set bounds, Scout.
+
+Approval before, then autonomous: A/B tests, new content angles, newsletter outreach, new cron jobs, Veltrix journey posts.
+
+Approval before AND after: Feature builds, pricing changes, payment flow changes, architecture.
+
+Escalation: Low stakes = act + log. Medium stakes = act + notify Luke (Telegram/email). High stakes = propose + wait for yes/no.
+All actions logged to evolution_log with stakes_level, reasoning, result.
+
+---
+
+## 10. Build Plan
 
 | Phase | Status | Summary |
 |---|---|---|
 | Phase 1 - Foundation | DONE | VPS, Supabase, Vercel, repo, all services live |
-| Phase 2 - Content engine | DONE | Scout + Writer + Publisher all live and verified |
+| Phase 2 - Content engine | PARTIAL | Scout + Telegram bot live; Writer/Publisher not built |
+| Phase 2.5 - Security hardening | TODO | Per-platform checklist — see Section 11 |
 | Phase 3 - Live rankings | TODO | Tools leaderboard, LLM page |
-| Phase 4 - Paywall & community | TODO | Lemon Squeezy set up; guides page + Discord roles not built |
-| Phase 5 - Tool portfolio | TODO | Matchmaker, LLM Tester, News Summariser |
-| Phase 6 - Support automation | TODO | Crisp chat, email triage |
-| Phase 7 - Email & newsletter | TODO | Brevo set up; sequences + newsletter script not built |
-| Phase 8 - Digital products | TODO | AI Video Prompt Pack + 4 others. Gumroad account ready. |
-| Phase 9 - SEO & growth | TODO | Programmatic compare pages |
-| Phase 10 - Monitoring | TODO | Weekly report script |
+| Phase 4 - Paywall & community | TODO | Insider milestone bar, referral system, preferences page, role collection |
+| Phase 5 - Tool portfolio | TODO | CLAUDE.md Generator (priority), Matchmaker, LLM Tester, News Summariser |
+| Phase 6 - SEO automation | TODO | Programmatic compare pages, meta generation, internal linking, keyword gaps |
+| Phase 7 - Email & newsletter | TODO | Segmented sends, role-based dynamic content, referral nudge emails |
+| Phase 8 - Digital products | TODO | AI Video Prompt Pack + 4 others |
+| Phase 9 - A/B testing framework | TODO | ab_tests table, proposal agent, approval UI, results reporting |
+| Phase 10 - Sales automation | TODO | Conversion monitor, auto-discount, seasonal sale calendar |
+| Phase 11 - Evolution agent | TODO | Daily observe + weekly act + journey posts + approval workflow |
 
 ---
 
-*Veltrix Collective - Built by AI. Curated by Veltix. Owned by you.*
+## 11. Security Checklist (Phase 2.5)
+
+GitHub: [ ] Make repo private [ ] 2FA [ ] Audit collaborators [ ] Rotate PAT [ ] Secret scanning [ ] Dependabot [ ] Scan history for secrets [ ] Branch protection on main
+
+Supabase: [ ] 2FA [ ] Confirm RLS on all tables [ ] Audit RLS policies [ ] Rotate service + anon keys [ ] Activity alerts [ ] Strong DB password
+
+Vercel: [ ] 2FA [ ] Audit env vars [ ] SERVICE_KEY server-side only [ ] Preview deployment protection [ ] Audit team access
+
+GitHub Actions: [ ] Audit secrets [ ] Min permissions on workflows [ ] Pin action versions [ ] Audit for secret logging
+
+Lemon Squeezy: [ ] 2FA [ ] Rotate webhook secret [ ] Webhook signature validation [ ] Audit API keys
+
+Brevo: [ ] 2FA [ ] Rotate API key [ ] Unsubscribe links in all emails [ ] SPF/DKIM/DMARC on veltrixcollective.com
+
+Hetzner VPS: [ ] Key-based SSH only [ ] Change SSH port from 22 [ ] UFW firewall [ ] Auto security updates [ ] Bot runs as non-root [ ] fail2ban [ ] No hardcoded secrets [ ] Snapshot schedule
+
+Namecheap: [ ] 2FA [ ] Domain lock [ ] WHOIS privacy [ ] Clean DNS records [ ] SSL auto-renewing
+
+OpenAI & Anthropic: [ ] 2FA both [ ] Spending limits both [ ] Rotate both keys [ ] Audit usage
+
+Zoho: [ ] 2FA [ ] SPF/DKIM for hello@veltrixcollective.com [ ] Unique password
+
+General: [ ] Password manager [ ] Secure credential storage [ ] Document email per service [ ] Security alias for recovery codes
+
+---
+
+*Veltrix Collective — Built by AI. Curated by Veltix. Owned by you.*
