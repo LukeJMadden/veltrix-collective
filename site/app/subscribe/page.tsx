@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 
 const STEPS = ['name', 'contact', 'location', 'goals', 'done'] as const;
-type Step = typeof STEPS[number];
 
 const GENDER_OPTIONS = [
   { value: 'male',        label: 'Male' },
@@ -175,6 +174,7 @@ export default function SubscribePage() {
           Veltrix Collective
         </div>
       </a>
+
       <div style={{
         width: '100%', maxWidth: '420px',
         background: 'linear-gradient(135deg,#0a0a12 0%,#0d0d1e 100%)',
@@ -190,6 +190,7 @@ export default function SubscribePage() {
             transition: 'width 0.4s ease',
           }} />
         </div>
+
         <div style={{ padding: '36px 32px 32px' }}>
           {step === 0 && (
             <Wrap icon="&#9889;" title="What should we call you?" sub="No surnames. Just what you like to be called.">
@@ -199,6 +200,7 @@ export default function SubscribePage() {
                 placeholder="e.g. Alex, Jamie, Priya..." style={inp} />
             </Wrap>
           )}
+
           {step === 1 && (
             <Wrap icon="&#9993;" title={`Good to meet you, ${form.preferredName}.`} sub="Your email and how you identify helps us personalise.">
               <input autoFocus type="email" value={form.email} autoComplete="email"
@@ -208,11 +210,14 @@ export default function SubscribePage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 {GENDER_OPTIONS.map(opt => (
                   <button key={opt.value} type="button" onClick={() => set('gender', opt.value)}
-                    style={{ ...chip, ...(form.gender === opt.value ? chipOn : {}) }}>{opt.label}</button>
+                    style={{ ...chip, ...(form.gender === opt.value ? chipOn : {}) }}>
+                    {opt.label}
+                  </button>
                 ))}
               </div>
             </Wrap>
           )}
+
           {step === 2 && (
             <Wrap icon="&#127758;" title="Where are you based?" sub="We send the newsletter at 5am your time, so this matters.">
               <select autoFocus value={form.country} onChange={e => set('country', e.target.value)}
@@ -224,6 +229,7 @@ export default function SubscribePage() {
                 onChange={e => set('city', e.target.value)} style={inp} />
             </Wrap>
           )}
+
           {step === 3 && (
             <Wrap icon="&#127919;" title="What are you here to do?" sub="Veltix checks in on this. Helps us send what matters to you.">
               <Label>In the next month...</Label>
@@ -240,14 +246,13 @@ export default function SubscribePage() {
               <Chips items={GOALS_12M} onPick={v => set('goal12Month', v)} />
             </Wrap>
           )}
+
           {isDone && (
             <div style={{ textAlign: 'center', padding: '8px 0' }}>
               <div style={{
                 width: '60px', height: '60px', margin: '0 auto 20px',
-                background: 'rgba(0,230,255,0.08)',
-                border: '1px solid rgba(0,230,255,0.25)',
-                borderRadius: '18px', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: '26px',
+                background: 'rgba(0,230,255,0.08)', border: '1px solid rgba(0,230,255,0.25)',
+                borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px',
               }}>&#9889;</div>
               <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#fff', marginBottom: '10px', letterSpacing: '-0.02em' }}>
                 You&apos;re in, {form.preferredName}.
@@ -255,7 +260,7 @@ export default function SubscribePage() {
               <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
                 Your first briefing hits at{' '}
                 <span style={{ color: '#00e6ff', fontWeight: 600 }}>5am your time</span>
-                {' '}-- curated AI news, tool rankings, what actually matters. No noise.
+                {' '}-- curated AI news, tool rankings, and what actually matters. No noise.
               </p>
               <div style={{ ...cardBox, marginBottom: '20px' }}>
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Refer friends, get rewards</p>
@@ -266,31 +271,28 @@ export default function SubscribePage() {
               <a href="/" style={primaryBtn}>Start exploring &rarr;</a>
             </div>
           )}
+
           {error && (
             <p style={{ color: '#ff5555', fontSize: '13px', marginTop: '12px', textAlign: 'center' }}>{error}</p>
           )}
+
           {!isDone && (
             <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               {step > 0
                 ? <button type="button" onClick={() => setStep(s => s - 1)} style={backBtn}>&larr; Back</button>
                 : <div />}
               <button type="button" onClick={next} disabled={!canNext() || loading}
-                style={{
-                  ...primaryBtn,
-                  opacity: canNext() && !loading ? 1 : 0.35,
-                  cursor: canNext() && !loading ? 'pointer' : 'not-allowed',
-                  minWidth: '130px',
-                }}>
+                style={{ ...primaryBtn, opacity: canNext() && !loading ? 1 : 0.35, cursor: canNext() && !loading ? 'pointer' : 'not-allowed', minWidth: '130px' }}>
                 {loading ? 'Saving...' : step === STEPS.length - 2 ? 'Join free \u2192' : 'Continue \u2192'}
               </button>
             </div>
           )}
+
           {!isDone && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '20px' }}>
               {STEPS.slice(0, -1).map((_, i) => (
                 <div key={i} style={{
-                  width: i === step ? '20px' : '6px', height: '6px',
-                  borderRadius: '3px',
+                  width: i === step ? '20px' : '6px', height: '6px', borderRadius: '3px',
                   background: i <= step ? '#00e6ff' : 'rgba(255,255,255,0.1)',
                   transition: 'all 0.3s ease',
                 }} />
@@ -299,6 +301,7 @@ export default function SubscribePage() {
           )}
         </div>
       </div>
+
       <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '12px', marginTop: '24px' }}>
         Free forever &middot; No spam &middot; Unsubscribe any time
       </p>
@@ -313,10 +316,8 @@ function Wrap({ icon, title, sub, children }: {
     <div>
       <div style={{
         width: '42px', height: '42px', marginBottom: '18px',
-        background: 'rgba(0,230,255,0.07)',
-        border: '1px solid rgba(0,230,255,0.18)',
-        borderRadius: '12px', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+        background: 'rgba(0,230,255,0.07)', border: '1px solid rgba(0,230,255,0.18)',
+        borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
       }} dangerouslySetInnerHTML={{ __html: icon }} />
       <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', marginBottom: '6px', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
         {title}
@@ -331,11 +332,7 @@ function Wrap({ icon, title, sub, children }: {
 
 function Label({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <p style={{
-      fontSize: '11px', color: 'rgba(255,255,255,0.3)',
-      marginBottom: '7px', letterSpacing: '0.06em',
-      textTransform: 'uppercase', ...style,
-    }}>
+    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '7px', letterSpacing: '0.06em', textTransform: 'uppercase', ...style }}>
       {children}
     </p>
   );

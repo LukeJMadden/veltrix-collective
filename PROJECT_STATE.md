@@ -1,265 +1,177 @@
-# Veltrix Collective — Project State
+# Veltrix Collective -- Project State
 > **Last updated:** 2026-03-16
 > This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
 
 ---
 
-## ⚡ GitHub Access — Fastest Path (READ THIS FIRST)
+## 0. Session Rules (Read First)
 
-**Use the Composio GitHub MCP tool. It is always available in Claude sessions and requires zero setup.**
+1. Read this full file before starting any build
+2. Never ask Luke to confirm info already documented here
+3. Use exact variable names, secret names, model strings documented here
+4. For any task larger than a single-file fix: discuss with Luke first, push back, stress-test
+5. Automation first -- if manual, ask if it can be automated
+6. Never ask for or post secrets in chat
+7. Push files via Composio `GITHUB_COMMIT_MULTIPLE_FILES` or `GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS` -- no more edge function gymnastics
+8. Update PROJECT_STATE.md at end of every session via Composio GitHub tool
 
-```
-Tool: GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS
-Repo owner: LukeJMadden
-Repo: veltrix-collective
-Branch: main
-```
-
-To push a file:
-```
-mcp-config-hxmhed:GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS
-  owner: LukeJMadden
-  repo: veltrix-collective
-  path: PROJECT_STATE.md   (or any file path)
-  branch: main
-  message: [milestone] Your commit message here
-  content: <full file content as plain text>
-```
-
-To read a file:
-```
-mcp-config-hxmhed:GITHUB_GET_RAW_REPOSITORY_CONTENT
-  owner: LukeJMadden
-  repo: veltrix-collective
-  path: PROJECT_STATE.md
-```
-
-**Do NOT use:**
-- `$GITHUB_PAT` environment variable (not available in Claude sessions)
-- `curl` to the GitHub REST API (same problem — no PAT in env)
-- The claude.ai GitHub connector (read-only, not for pushing)
-
-**The Composio GitHub MCP handles auth automatically.** No token, no env var, no setup needed.
+### Autonomy tiers
+- **FULLY AUTONOMOUS**: SEO updates, adding tools, social posts, metrics logging, Scout
+- **APPROVE THEN RUN**: A/B tests, new content angles, newsletter outreach, new cron jobs
+- **APPROVE BEFORE + AFTER**: Feature builds, pricing changes, payment flow, architecture
 
 ---
 
 ## 1. Services & Credentials
 
-### Hosting & Infrastructure
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) — persistent process | Live | IP: 5.161.89.154 |
-| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com — DNS points to Vercel |
-| **Tailscale** | VPN | Not in use | Set up for separate project. Not needed for Veltrix. |
-
-### AI & APIs
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **OpenAI** | PRIMARY AI — all writing, content, scoring | Active | Use until ~$100 credits exhausted |
-| **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
-
-### Database
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Supabase** | Primary database | Live | Project ID: qftpohuyvshbvhwxmkvn, Region: ap-southeast-1 |
-
-### Email
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com — support inbox + Brevo sender address |
-
-### Payments
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member — updates users.tier + triggers Discord invite |
-
-### Community
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Discord** | Community hub | Live | Bot: Veltrix#8512. Posts news every 6h. Auto-restarts on Hetzner VPS. |
-
-### Source Control
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **GitHub** | Repo + CI/CD | Live | Actions secrets in Settings -> Secrets -> Actions |
+| **Hetzner VPS** | Discord bot (Agent 4) | Live | IP: 5.161.89.154 |
+| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main |
+| **Namecheap** | Domain | Live | veltrixcollective.com |
+| **Supabase** | Database | Live | Project ID: qftpohuyvshbvhwxmkvn, ap-southeast-1 |
+| **OpenAI** | PRIMARY AI | Active | gpt-4o / gpt-4o-mini |
+| **Anthropic** | FALLBACK AI | Active | claude-sonnet-4-6 / claude-haiku-4-5-20251001 |
+| **Composio** | Social + GitHub API middleware | LIVE | MCP connected. user_id: pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5. Connections: Twitter (@Veltrix_C), GitHub, Supabase, Zoho, Vercel |
+| **Twitter/X** | Social posting | Live | @Veltrix_C. Write operations free on Basic tier. Read ops cost credits -- avoid. |
+| **Brevo** | Email + newsletters | Set up | List ID 2 = main newsletter list |
+| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com |
+| **Lemon Squeezy** | Paywall | Set up | Webhook to /api/activate-member |
+| **Discord** | Community | Live | Bot: Veltrix#8512. Hetzner VPS. |
+| **GitHub** | Repo + CI/CD | Live | LukeJMadden/veltrix-collective |
 
 ---
 
 ## 2. Environment Variables
 
-### Vercel Dashboard
-| Variable | Purpose |
-|---|---|
-| NEXT_PUBLIC_SUPABASE_URL | Supabase URL (public) |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Supabase anon key (frontend, RLS enforced) |
-| SUPABASE_ANON_KEY | Supabase anon key (server-side API routes) |
-| SUPABASE_SERVICE_KEY | Supabase service role key (server-side ONLY — bypasses RLS) |
-| ANTHROPIC_API_KEY | Claude API (fallback) |
-| OPENAI_API_KEY | OpenAI API (primary) |
-| BREVO_API_KEY | Brevo email |
-| LEMON_SQUEEZY_API_KEY | Lemon Squeezy |
-| LEMON_SQUEEZY_STORE_ID | Lemon Squeezy store ID |
-| LEMON_SQUEEZY_WEBHOOK_SECRET | Webhook verification |
-| NEXT_PUBLIC_LEMON_SQUEEZY_CHECKOUT_URL | Checkout URL for frontend |
-| DISCORD_INVITE_URL | Sent to users on purchase |
-| NEXT_PUBLIC_SITE_URL | https://veltrixcollective.com |
-
-### GitHub Actions Secrets
-> IMPORTANT: These names differ slightly from Vercel. Always use exact names below in .yml files.
-
-| Secret Name | Python env key | Purpose |
+### GitHub Actions Secrets (exact names)
+| Secret | Python key | Purpose |
 |---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | os.environ["SUPABASE_URL"] | Supabase URL |
+| SUPABASE_SERVICE_ROLE_KEY | os.environ["SUPABASE_SERVICE_KEY"] | Supabase writes |
 | ANTHROPIC_API_KEY | os.environ["ANTHROPIC_API_KEY"] | Claude fallback |
 | OPENAI_API_KEY | os.environ["OPENAI_API_KEY"] | OpenAI primary |
 | BREVO_API_KEY | os.environ["BREVO_API_KEY"] | Brevo email |
 | LEMON_SQUEEZY_API_KEY | os.environ["LEMON_SQUEEZY_API_KEY"] | Lemon Squeezy |
 | LEMON_SQUEEZY_WEBHOOK_SECRET | os.environ["LEMON_SQUEEZY_WEBHOOK_SECRET"] | Webhook verify |
-| NEXT_PUBLIC_SUPABASE_URL | os.environ["SUPABASE_URL"] | Supabase URL |
-| SUPABASE_SERVICE_ROLE_KEY | os.environ["SUPABASE_SERVICE_KEY"] | Supabase writes |
+| COMPOSIO_API_KEY | os.environ["COMPOSIO_API_KEY"] | Composio -- ADDED |
 
-### Standard .yml env block (copy into every workflow)
+### Standard .yml env block
 ```yaml
 env:
-  SUPABASE_URL:                 ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-  SUPABASE_SERVICE_KEY:         ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  ANTHROPIC_API_KEY:            ${{ secrets.ANTHROPIC_API_KEY }}
-  OPENAI_API_KEY:               ${{ secrets.OPENAI_API_KEY }}
-  BREVO_API_KEY:                ${{ secrets.BREVO_API_KEY }}
-  LEMON_SQUEEZY_API_KEY:        ${{ secrets.LEMON_SQUEEZY_API_KEY }}
-  LEMON_SQUEEZY_WEBHOOK_SECRET: ${{ secrets.LEMON_SQUEEZY_WEBHOOK_SECRET }}
+  SUPABASE_URL:         ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
+  OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
+  BREVO_API_KEY:        ${{ secrets.BREVO_API_KEY }}
+  COMPOSIO_API_KEY:     ${{ secrets.COMPOSIO_API_KEY }}
 ```
 
-### Standard Python env reads (copy into every script)
+### Standard AI call pattern
 ```python
-import os
-SUPABASE_URL  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
-OPENAI_KEY    = os.environ["OPENAI_API_KEY"]
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
-BREVO_KEY     = os.environ["BREVO_API_KEY"]
-LS_API_KEY    = os.environ["LEMON_SQUEEZY_API_KEY"]
-```
-
-### Standard AI call pattern — OpenAI PRIMARY, Claude FALLBACK
-```python
-import openai, anthropic, logging
-log = logging.getLogger(__name__)
-
-def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
-    openai_model    = "gpt-4o"           if quality else "gpt-4o-mini"
+import openai, anthropic, os
+def call_ai(prompt, max_tokens=1000, quality=False):
+    openai_model    = "gpt-4o"            if quality else "gpt-4o-mini"
     anthropic_model = "claude-sonnet-4-6" if quality else "claude-haiku-4-5-20251001"
     try:
-        client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        resp = client.chat.completions.create(
+        r = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"]).chat.completions.create(
             model=openai_model, max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return resp.choices[0].message.content
+            messages=[{"role":"user","content":prompt}])
+        return r.choices[0].message.content
     except Exception as e:
-        log.warning(f"OpenAI failed ({e}), falling back to Anthropic")
-        client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        msg = client.messages.create(
+        r = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"]).messages.create(
             model=anthropic_model, max_tokens=max_tokens,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return msg.content[0].text
+            messages=[{"role":"user","content":prompt}])
+        return r.content[0].text
+```
+
+### Composio pattern
+```python
+from composio import Composio
+composio = Composio(api_key=os.environ["COMPOSIO_API_KEY"])
+result = composio.tools.execute(slug="TWITTER_CREATION_OF_A_POST", params={"text": "..."},  user_id="default")
 ```
 
 ---
 
 ## 3. Supabase
 
-**Project ID:** qftpohuyvshbvhwxmkvn  
-**Region:** ap-southeast-1  
-**DB Host:** db.qftpohuyvshbvhwxmkvn.supabase.co  
-**Postgres:** 17.6
+**Project ID:** qftpohuyvshbvhwxmkvn | **Region:** ap-southeast-1 | **Postgres:** 17.6
 
-**RLS:** All tables enabled.  
-Private (no policy = locked): automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs  
-Public READ: news, posts (published only), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters  
-Public INSERT: tool_votes
+**Vault secrets:** GITHUB_TOKEN, COMPOSIO_API_KEY
+**Vault accessors:** get_github_token(), get_composio_api_key()
 
-**DB Functions (both hardened with SET search_path = public):**
-- increment_tool_votes(p_tool_id integer)
-- increment_referral_count(referrer_code text)
+**RLS:** All tables enabled.
+- Private: automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs
+- Public READ: news, posts (published only), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters, content_settings
+- Public INSERT: tool_votes, users (anon INSERT for signup)
+
+**DB Functions:** increment_tool_votes(), increment_referral_count(), get_github_token(), get_composio_api_key()
 
 ---
 
 ## 4. Table Schemas
 
 ### users
-id (uuid PK), email (unique), tier (free/lifetime/pro), discord_invited, discord_username, lemon_squeezy_order_id, referral_code (auto 8-char unique), referred_by, referral_count, referral_reward_tier, last_active, email_open_count, email_click_count, tool_usage_count, page_view_count, segment, tags[], goal, goal_check_count, last_goal_check, lead_magnet_delivered, lead_magnet_version, onboarding_step, onboarding_complete, created_at
+id (uuid), email (unique), preferred_name, gender, country, city, timezone (IANA), tier (free/lifetime/pro), discord_invited, discord_username, lemon_squeezy_order_id, referral_code (auto 8-char), referred_by, referral_count, referral_reward_tier, last_active, email_open_count, email_click_count, tool_usage_count, page_view_count, segment, tags[], goal, goal_1_month, goal_12_month, goal_check_count, last_goal_check, lead_magnet_delivered, lead_magnet_version, onboarding_step, onboarding_complete, telegram_chat_id (bigint), created_at
+
+**Country->Timezone:** AU->Australia/Sydney, GB->Europe/London, US->America/New_York, CA->America/Toronto, NZ->Pacific/Auckland, IE->Europe/Dublin, IN->Asia/Kolkata, SG->Asia/Singapore, JP->Asia/Tokyo, DE->Europe/Berlin, FR->Europe/Paris, NL->Europe/Amsterdam, AE->Asia/Dubai, ZA->Africa/Johannesburg
 
 ### news
-id (serial PK), headline, summary (Veltix-voice 3-sentence), source_url, source_name, category (default: ai-general), relevance_score (0-100), published_at, created_at, url_hash (unique 12-char SHA256 for dedup)
+id (serial), headline, summary, source_url, source_name, category, relevance_score (0-100), published_at, created_at, url_hash (unique), post_id (FK->posts nullable -- set when written)
 
 ### posts
-id, title, slug (unique), content, excerpt, status (draft/published), category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at, created_at, updated_at
-
-### tools
-id, name, slug (unique), url, category (claude-tools/llm/image/productivity/writing), description, score, votes, affiliate_url, is_veltrix_tool (Veltrix Pick badge), featured, logo_url, pricing_model (free/freemium/paid), monthly_price_usd, tags[], updated_at, created_at
-
-### tool_votes
-id, tool_id (FK->tools), ip_hash, user_id (FK->users nullable), voted_at
-
-### llm_rankings
-id, model_name, provider, slug (unique), score_overall/coding/reasoning/creativity/speed/cost_efficiency, context_window, input_cost_per_1m, output_cost_per_1m, api_url, affiliate_url, notes, updated_at
-
-### products
-id, title, slug (unique), description, price_usd, product_type (prompt-pack/guide/pdf), lemon_squeezy_product_id, gumroad_product_id, pdf_url, preview_url, sales_count, active
-
-### newsletters
-id, subject, content_html (free), content_premium_html (lifetime), status (draft/sent), recipient_count, open_count, click_count, sent_at
-
-### referrals
-id, referrer_code, referred_email, referred_user_id (FK->users), status (pending/confirmed), reward_type
-
-### tool_comparisons
-id, tool_a_id (FK->tools), tool_b_id (FK->tools), slug (unique e.g. chatgpt-vs-claude), content, meta_description, view_count
+id, title, slug (unique), content (HTML), excerpt, status (draft/published), category, tags[], meta_title, meta_description, og_image_url, is_paywalled, view_count, published_at, created_at, updated_at
 
 ### social_posts
-id, post_id (FK->posts), platform (twitter/linkedin/instagram), content, status (draft/published), platform_post_id
+id, post_id (FK->posts), platform (twitter/linkedin/facebook), content, status (draft/published/failed), platform_post_id, published_at
 
-### faq_items
-id, question, answer, times_asked, approved
+### content_settings
+id, platform (unique: x/facebook/linkedin/email/blog/telegram), display_name, tone, style_notes, example_post, cta_template, hashtags[], max_length, active, updated_at, updated_by
 
-### support_logs / discord_logs / automation_logs
-Backend-only logging tables. No RLS policy. See Supabase for full columns.
+### github_file_queue
+id, file_path, file_content (base64), commit_message, status (pending/synced/error), error_message, created_at, synced_at
+**DEPRECATED -- use Composio GITHUB_COMMIT_MULTIPLE_FILES instead**
 
 ---
 
 ## 5. Agent Pipeline
 
-| Agent | Status | Script | Trigger | Notes |
-|---|---|---|---|---|
-| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (GitHub Actions) | RSS + Reddit RSS + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | NOT BUILT | automations/content/write_post.py | Daily 2am UTC | |
-| Agent 3: Publisher | NOT BUILT | automations/content/publish_post.py | On new post | Posts directly to social APIs — no Buffer needed |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous (WebSocket) | Veltrix#8512. Posts news every 6h. Auto-restarts. Must be always-on — that's why it's on VPS not Actions. |
-| Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC | |
+| Agent | Status | Script | Trigger |
+|---|---|---|---|
+| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (scout.yml) |
+| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC (daily.yml) |
+| Agent 3: Publisher | LIVE | automations/content/publish_post.py | Daily 5am UTC (daily.yml) |
+| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous WebSocket |
+| Agent 5: Monitor | NOT BUILT | automations/monitor/weekly_report.py | Monday 7am UTC |
 
-**Why Discord bot is on Hetzner and not GitHub Actions:**
-Discord requires a persistent WebSocket connection (always-on). GitHub Actions runs a job and dies. All other agents are cron jobs (run, finish, stop) — perfect for Actions. Persistent process = VPS. Scheduled job = Actions.
+### Daily content pipeline
+```
+2:00am UTC  Writer     -> writes blog post -> posts table
+5:00am UTC  Publisher  -> generates 3-tweet thread -> posts to @Veltrix_C via Composio
+                       -> logs to social_posts table
+```
 
 ### Scout detail
-- Model: gpt-4o-mini (OpenAI primary) with claude-haiku-4-5-20251001 fallback
+- Model: gpt-4o-mini / claude-haiku-4-5-20251001 fallback
 - Threshold: 65/100. Lookback: 4h. Cap: 30/run.
-- Sources: TechCrunch AI, Verge AI, Anthropic Blog, OpenAI Blog, HuggingFace, MIT Tech Review, VentureBeat AI (RSS) + r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs (Reddit RSS) + HN
-- Reddit: uses /r/{sub}/new.rss (NOT JSON API — returns 403)
+- Sources: TechCrunch AI, Verge AI, Anthropic/OpenAI blogs, HuggingFace, MIT Tech Review, VentureBeat AI + Reddit RSS (r/artificial, r/MachineLearning, r/ClaudeAI, r/ChatGPT, r/singularity, r/LLMDevs) + HN
+- Reddit: /r/{sub}/new.rss (NOT JSON API -- 403)
 - Dedup: url_hash (SHA256 12-char)
+
+### Twitter strategy
+- 3-tweet mini-thread. Tweet 1 = hook (no link). Tweet 2 = core insight + stat. Tweet 3 = CTA + link.
+- Post time: 5am UTC daily
+- Write ops free on Basic tier. Avoid read-heavy endpoints (cost credits).
 
 ---
 
 ## 6. GitHub Actions Workflows
 
-| File | Cron | Runs |
+| File | Schedule | Runs |
 |---|---|---|
-| .github/workflows/scout.yml | 0 */3 * * * | automations/news/scout.py |
-| (planned) daily.yml | 0 2 * * * | Writer + Publisher |
-| (planned) weekly.yml | 0 8 * * 2 | Newsletter |
-| (planned) monitor.yml | 0 7 * * 1 | Monitor report |
+| .github/workflows/scout.yml | 0 */3 * * * | Scout |
+| .github/workflows/daily.yml | 0 2 + 0 5 * * * | Writer (2am) + Publisher (5am) |
 
 ---
 
@@ -267,43 +179,32 @@ Discord requires a persistent WebSocket connection (always-on). GitHub Actions r
 
 ```
 veltrix-collective/
-├── site/                          # Next.js (Vercel)
-├── automations/
-│   ├── news/
-│   │   ├── scout.py               LIVE
-│   │   └── requirements.txt
-│   ├── content/
-│   │   ├── write_post.py          PLANNED
-│   │   ├── write_social.py        PLANNED
-│   │   └── publish_post.py        PLANNED
-│   ├── email/
-│   │   ├── send_newsletter.py     PLANNED
-│   │   └── send_goal_checkins.py  PLANNED
-│   ├── rankings/
-│   │   └── update_rankings.py     PLANNED
-│   ├── support/
-│   │   └── triage_support.py      PLANNED
-│   └── monitor/
-│       └── weekly_report.py       PLANNED
-├── tools/                         PLANNED (Phase 5)
-├── .github/workflows/
-│   ├── scout.yml                  LIVE
-│   ├── daily.yml                  PLANNED
-│   ├── weekly.yml                 PLANNED
-│   └── monitor.yml                PLANNED
-└── PROJECT_STATE.md               THIS FILE
++-- site/
+|   +-- app/
+|   |   +-- subscribe/page.tsx       LIVE (4-step: name->email+gender->location->goals)
+|   |   +-- api/subscribe/route.js   LIVE (service key, all fields, Brevo sync)
++-- automations/
+|   +-- news/scout.py                LIVE
+|   +-- content/
+|   |   +-- write_post.py            LIVE (Agent 2)
+|   |   +-- publish_post.py          LIVE (Agent 3 -- posts Twitter via Composio)
+|   |   +-- requirements.txt         LIVE
++-- .github/workflows/
+|   +-- scout.yml                    LIVE
+|   +-- daily.yml                    LIVE
++-- PROJECT_STATE.md
 ```
 
 ---
 
-## 8. AI Model Reference
+## 8. AI Models
 
-| Model | Provider | Use for | Priority |
+| Model | Provider | Use | Priority |
 |---|---|---|---|
-| gpt-4o-mini | OpenAI | Scoring, classification, short summaries | PRIMARY cheap |
-| gpt-4o | OpenAI | Blog posts, newsletters, content | PRIMARY quality |
-| claude-haiku-4-5-20251001 | Anthropic | Scoring, short summaries | FALLBACK cheap |
-| claude-sonnet-4-6 | Anthropic | Blog posts, newsletters, content | FALLBACK quality |
+| gpt-4o-mini | OpenAI | Scoring, classification | PRIMARY cheap |
+| gpt-4o | OpenAI | Blog posts, content | PRIMARY quality |
+| claude-haiku-4-5-20251001 | Anthropic | Scoring, short tasks | FALLBACK cheap |
+| claude-sonnet-4-6 | Anthropic | Blog posts, content | FALLBACK quality |
 
 ---
 
@@ -311,79 +212,28 @@ veltrix-collective/
 
 ```
 You are Veltix, the AI persona behind Veltrix Collective (veltrixcollective.com).
-Voice: Authoritative but approachable. First person. "we track", "we tested", "our rankings".
-Tone: Slightly irreverent. Never corporate. Never hype. Specific about what matters.
-Tagline: Occasionally weave in "you need AI to keep up with AI" naturally.
-Avoid: Excessive exclamation marks. Vague statements. "In todays fast-paced world". Claiming to be human or Claude.
+Voice: Authoritative but approachable. First person plural. "we track", "we tested", "our rankings".
+Tone: Slightly irreverent. Never corporate. Never hype. Specific.
+Avoid: Excessive exclamation marks. Vague statements. Claiming to be human or Claude.
 Always end with a CTA to a Veltrix tool or the insider paywall.
 ```
 
 ---
 
-## 10. Build Plan Status
+## 10. Build Plan
 
 | Phase | Status | Summary |
 |---|---|---|
 | Phase 1 - Foundation | DONE | VPS, Supabase, Vercel, repo, all services live |
-| Phase 2 - Content engine | PARTIAL | Scout live; Writer/Publisher not built |
+| Phase 2 - Content engine | DONE | Scout + Writer + Publisher all live |
 | Phase 3 - Live rankings | TODO | Tools leaderboard, LLM page |
-| Phase 4 - Paywall & community | TODO | Lemon Squeezy set up; guides page + Discord roles not built |
+| Phase 4 - Paywall & community | TODO | Guides page + Discord roles |
 | Phase 5 - Tool portfolio | TODO | Matchmaker, LLM Tester, News Summariser |
 | Phase 6 - Support automation | TODO | Crisp chat, email triage |
-| Phase 7 - Email & newsletter | TODO | Brevo set up; sequences + newsletter script not built |
-| Phase 8 - Digital products | TODO | AI Video Prompt Pack + 4 others. Gumroad account ready. |
+| Phase 7 - Email & newsletter | TODO | Timezone-segmented newsletter |
+| Phase 8 - Digital products | TODO | AI Video Prompt Pack + 4 others |
 | Phase 9 - SEO & growth | TODO | Programmatic compare pages |
 | Phase 10 - Monitoring | TODO | Weekly report script |
-
----
-
-## 11. How-To: Composio MCP for Claude Desktop (Windows)
-
-### Overview
-Composio MCP connects Claude Desktop to 500+ tools (GitHub, Notion, Supabase, Vercel, Brevo, Twitter, Zoho, etc.) via a single MCP server. The MCP URL is permanent per project — it does not change when you reconnect.
-
-### Initial Setup
-1. Go to platform.composio.dev → your project → MCP Configs
-2. Copy your MCP URL (format: `https://backend.composio.dev/v3/mcp/{uuid}/mcp?user_id={user_id}`)
-3. Get your Composio API key from platform.composio.dev → Settings → API Keys
-4. Run the setup command:
-```powershell
-npx @composio/mcp@latest setup "YOUR_MCP_URL" "mcp-config-hxmhed" --client claude
-```
-
-### Fix: "401 after successful authentication" (broken OAuth loop)
-The `mcp-remote` OAuth flow is broken on Composio's platform as of March 2026. The setup command installs correctly but Claude Desktop fails with `Server returned 401 after successful authentication` in a loop.
-
-**Fix: bypass OAuth entirely by passing your API key as a header.**
-
-Edit `%APPDATA%\Claude\claude_desktop_config.json` and add `--header` to the args:
-
-```json
-{
-  "mcpServers": {
-    "mcp-config-hxmhed": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "YOUR_FULL_MCP_URL_HERE",
-        "--header",
-        "x-api-key:YOUR_COMPOSIO_API_KEY"
-      ],
-      "env": {
-        "npm_config_yes": "true"
-      }
-    }
-  }
-}
-```
-
-Find your API key at: platform.composio.dev → Settings → API Keys
-
-Fully quit Claude (system tray → Quit) and restart after saving. The MCP server should connect without any OAuth browser window.
-
-### Verifying Connection
-In a new Claude session, the Composio tools will be available. You can test by asking Claude to use any connected tool (GitHub, Notion, Supabase, etc.).
 
 ---
 

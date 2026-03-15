@@ -1,33 +1,56 @@
-name: Daily Content
+name: Daily Content Pipeline
 
 on:
   schedule:
-    - cron: "0 2 * * *"   # 2am UTC daily
-  workflow_dispatch:        # manual trigger for testing
-
-env:
-  SUPABASE_URL:                 ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-  SUPABASE_SERVICE_KEY:         ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  ANTHROPIC_API_KEY:            ${{ secrets.ANTHROPIC_API_KEY }}
-  OPENAI_API_KEY:               ${{ secrets.OPENAI_API_KEY }}
-  BREVO_API_KEY:                ${{ secrets.BREVO_API_KEY }}
-  LEMON_SQUEEZY_API_KEY:        ${{ secrets.LEMON_SQUEEZY_API_KEY }}
-  LEMON_SQUEEZY_WEBHOOK_SECRET: ${{ secrets.LEMON_SQUEEZY_WEBHOOK_SECRET }}
+    - cron: '0 2 * * *'   # 2am UTC - Writer
+    - cron: '0 5 * * *'   # 5am UTC - Publisher
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Which agent to run'
+        required: true
+        default: 'writer'
+        type: choice
+        options:
+          - writer
+          - publisher
 
 jobs:
   writer:
-    name: Agent 2 — Writer
+    name: Writer - Generate blog post
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'writer' || github.event_name == 'schedule' && github.event.schedule == '0 2 * * *'
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
+          python-version: '3.11'
       - name: Install dependencies
         run: pip install -r automations/content/requirements.txt
-
       - name: Run Writer
         run: python automations/content/write_post.py
+        env:
+          SUPABASE_URL:        ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+
+  publisher:
+    name: Publisher - Post Twitter thread
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'publisher' || github.event_name == 'schedule' && github.event.schedule == '0 5 * * *'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r automations/content/requirements.txt
+      - name: Run Publisher
+        run: python automations/content/publish_post.py
+        env:
+          SUPABASE_URL:        ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY:      ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
+          COMPOSIO_API_KEY:    ${{ secrets.COMPOSIO_API_KEY }}
