@@ -3,7 +3,16 @@
 Agent 3: Publisher
 Runs daily at 5am UTC via GitHub Actions.
 Finds latest published post, generates 3-tweet thread,
-posts to @Veltrix_C via Composio REST API, logs to social_posts table.
+posts to @Veltrix_C via Composio, logs to social_posts table.
+
+Composio API ref (verified working):
+  POST https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute
+  Headers: x-api-key, Content-Type: application/json
+  Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}}
+  Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
+
+Note: Requires Twitter Basic tier ($100/mo) for write access.
+Free tier returns 402 CreditsDepleted.
 """
 
 import os
@@ -117,42 +126,33 @@ Example: ["Tweet 1", "Tweet 2", "Tweet 3"]"""
     return tweets
 
 
-def composio_execute(action_slug: str, tool_input: dict) -> dict:
-    """Call Composio v1 actions API to execute a tool action."""
-    # Composio v1 actions endpoint (v3 tools endpoint returns 404)
+def post_tweet(text: str, reply_to_id: str | None = None) -> str:
+    """Post a single tweet via Composio v1 actions API. Returns tweet ID."""
+    tool_input: dict = {"text": text}
+    if reply_to_id:
+        tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
+
     resp = requests.post(
-        f"https://backend.composio.dev/api/v1/actions/{action_slug}/execute",
+        "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
         headers=COMPOSIO_HEADERS,
-        json={
-            "connectedAccountId": None,  # use default connected account
-            "input": tool_input,
-            "entityId": "default",
-        }
+        json={"entityId": "default", "input": tool_input},
     )
 
-    log.info(f"Composio response status: {resp.status_code}")
-    log.info(f"Composio response: {resp.text[:500]}")
+    log.info(f"Composio HTTP {resp.status_code}")
+    data = resp.json()
 
-    resp.raise_for_status()
-    return resp.json()
+    if not data.get("successfull", False):
+        raise RuntimeError(f"Tweet failed: {data.get('error', data)}")
+
+    return data["data"]["data"]["id"]
 
 
 def post_thread(tweets: list[str]) -> list[str]:
-    """Post 3-tweet thread via Composio."""
     tweet_ids = []
     reply_to_id = None
 
     for i, text in enumerate(tweets):
-        tool_input = {"text": text}
-        if reply_to_id:
-            tool_input["reply"] = {"in_reply_to_tweet_id": reply_to_id}
-
-        result = composio_execute("TWITTER_CREATION_OF_A_POST", tool_input)
-
-        if not result.get("successful", False):
-            raise RuntimeError(f"Tweet {i+1} failed: {result.get('error', result)}")
-
-        tweet_id = result["data"]["data"]["id"]
+        tweet_id = post_tweet(text, reply_to_id)
         tweet_ids.append(tweet_id)
         reply_to_id = tweet_id
         log.info(f"Posted tweet {i+1}/3: id={tweet_id}")
