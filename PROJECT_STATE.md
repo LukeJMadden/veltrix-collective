@@ -4,6 +4,45 @@
 
 ---
 
+## ⚡ GitHub Access — Fastest Path (READ THIS FIRST)
+
+**Use the Composio GitHub MCP tool. It is always available in Claude sessions and requires zero setup.**
+
+```
+Tool: GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS
+Repo owner: LukeJMadden
+Repo: veltrix-collective
+Branch: main
+```
+
+To push a file:
+```
+mcp-config-hxmhed:GITHUB_CREATE_OR_UPDATE_FILE_CONTENTS
+  owner: LukeJMadden
+  repo: veltrix-collective
+  path: PROJECT_STATE.md   (or any file path)
+  branch: main
+  message: [milestone] Your commit message here
+  content: <full file content as plain text>
+```
+
+To read a file:
+```
+mcp-config-hxmhed:GITHUB_GET_RAW_REPOSITORY_CONTENT
+  owner: LukeJMadden
+  repo: veltrix-collective
+  path: PROJECT_STATE.md
+```
+
+**Do NOT use:**
+- `$GITHUB_PAT` environment variable (not available in Claude sessions)
+- `curl` to the GitHub REST API (same problem — no PAT in env)
+- The claude.ai GitHub connector (read-only, not for pushing)
+
+**The Composio GitHub MCP handles auth automatically.** No token, no env var, no setup needed.
+
+---
+
 ## 1. Services & Credentials
 
 ### Hosting & Infrastructure
