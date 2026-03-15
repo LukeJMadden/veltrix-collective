@@ -237,4 +237,8 @@ Always end with a CTA to a Veltrix tool or the insider paywall.
 
 ---
 
+## 11. issue and fixes
+
+When facing issues, first refer to https://github.com/LukeJMadden/veltrix-collective/tree/main/docs to see if there is already an established fix.
+
 *Veltrix Collective - Built by AI. Curated by Veltix. Owned by you.*
