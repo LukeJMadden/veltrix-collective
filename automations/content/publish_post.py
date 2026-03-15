@@ -3,7 +3,7 @@
 Agent 3: Publisher
 Runs daily at 5am UTC via GitHub Actions.
 Finds latest published post, generates 3-tweet thread,
-posts to @Veltrix_C via Composio, logs to social_posts table.
+posts to @Veltrix_C via Composio REST API, logs to social_posts table.
 """
 
 import os
@@ -13,7 +13,6 @@ from datetime import datetime, timezone
 
 import anthropic
 import requests
-from composio import Composio
 
 try:
     import openai
@@ -30,11 +29,16 @@ ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 COMPOSIO_KEY  = os.environ["COMPOSIO_API_KEY"]
 SITE_URL      = "https://veltrixcollective.com"
 
-HEADERS = {
+SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json",
     "Prefer": "return=representation",
+}
+
+COMPOSIO_HEADERS = {
+    "x-api-key": COMPOSIO_KEY,
+    "Content-Type": "application/json",
 }
 
 
@@ -61,7 +65,7 @@ def call_ai(prompt: str, max_tokens: int = 800) -> str:
 def get_latest_post() -> dict | None:
     resp = requests.get(
         f"{SUPABASE_URL}/rest/v1/posts",
-        headers=HEADERS,
+        headers=SUPABASE_HEADERS,
         params={"select": "id,title,excerpt,slug", "status": "eq.published",
                 "order": "published_at.desc", "limit": "10"}
     )
@@ -73,7 +77,7 @@ def get_latest_post() -> dict | None:
     for post in posts:
         check = requests.get(
             f"{SUPABASE_URL}/rest/v1/social_posts",
-            headers=HEADERS,
+            headers=SUPABASE_HEADERS,
             params={"post_id": f"eq.{post['id']}", "platform": "eq.twitter",
                     "status": "eq.published"}
         )
@@ -113,23 +117,31 @@ Example: ["Tweet 1", "Tweet 2", "Tweet 3"]"""
     return tweets
 
 
+def composio_execute(action_slug: str, tool_input: dict) -> dict:
+    """Call Composio REST API to execute a tool action."""
+    resp = requests.post(
+        f"https://backend.composio.dev/api/v3/tools/{action_slug}/execute",
+        headers=COMPOSIO_HEADERS,
+        json={
+            "user_id": "default",
+            "input": tool_input,
+        }
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def post_thread(tweets: list[str]) -> list[str]:
-    """Post 3-tweet thread via Composio v0.11 SDK."""
-    composio = Composio(api_key=COMPOSIO_KEY)
+    """Post 3-tweet thread via Composio REST API."""
     tweet_ids = []
     reply_to_id = None
 
     for i, text in enumerate(tweets):
-        # v0.11 uses `input` not `params`
         tool_input = {"text": text}
         if reply_to_id:
             tool_input["reply"] = {"in_reply_to_tweet_id": reply_to_id}
 
-        result = composio.tools.execute(
-            slug="TWITTER_CREATION_OF_A_POST",
-            input=tool_input,
-            user_id="default",
-        )
+        result = composio_execute("TWITTER_CREATION_OF_A_POST", tool_input)
 
         if not result.get("successful", False):
             raise RuntimeError(f"Tweet {i+1} failed: {result.get('error', result)}")
@@ -147,7 +159,7 @@ def log_to_supabase(post_id: int, tweets: list[str], tweet_ids: list[str]):
     for tweet_text, tweet_id in zip(tweets, tweet_ids):
         requests.post(
             f"{SUPABASE_URL}/rest/v1/social_posts",
-            headers=HEADERS,
+            headers=SUPABASE_HEADERS,
             json={"post_id": post_id, "platform": "twitter", "content": tweet_text,
                   "status": "published", "platform_post_id": tweet_id, "published_at": now}
         ).raise_for_status()
