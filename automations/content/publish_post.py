@@ -118,21 +118,27 @@ Example: ["Tweet 1", "Tweet 2", "Tweet 3"]"""
 
 
 def composio_execute(action_slug: str, tool_input: dict) -> dict:
-    """Call Composio REST API to execute a tool action."""
+    """Call Composio v1 actions API to execute a tool action."""
+    # Composio v1 actions endpoint (v3 tools endpoint returns 404)
     resp = requests.post(
-        f"https://backend.composio.dev/api/v3/tools/{action_slug}/execute",
+        f"https://backend.composio.dev/api/v1/actions/{action_slug}/execute",
         headers=COMPOSIO_HEADERS,
         json={
-            "user_id": "default",
+            "connectedAccountId": None,  # use default connected account
             "input": tool_input,
+            "entityId": "default",
         }
     )
+
+    log.info(f"Composio response status: {resp.status_code}")
+    log.info(f"Composio response: {resp.text[:500]}")
+
     resp.raise_for_status()
     return resp.json()
 
 
 def post_thread(tweets: list[str]) -> list[str]:
-    """Post 3-tweet thread via Composio REST API."""
+    """Post 3-tweet thread via Composio."""
     tweet_ids = []
     reply_to_id = None
 
