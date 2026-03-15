@@ -1,51 +1,33 @@
-name: Daily — Writer + Publisher
+name: Daily Content
 
 on:
   schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:
+    - cron: "0 2 * * *"   # 2am UTC daily
+  workflow_dispatch:        # manual trigger for testing
+
+env:
+  SUPABASE_URL:                 ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+  SUPABASE_SERVICE_KEY:         ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  ANTHROPIC_API_KEY:            ${{ secrets.ANTHROPIC_API_KEY }}
+  OPENAI_API_KEY:               ${{ secrets.OPENAI_API_KEY }}
+  BREVO_API_KEY:                ${{ secrets.BREVO_API_KEY }}
+  LEMON_SQUEEZY_API_KEY:        ${{ secrets.LEMON_SQUEEZY_API_KEY }}
+  LEMON_SQUEEZY_WEBHOOK_SECRET: ${{ secrets.LEMON_SQUEEZY_WEBHOOK_SECRET }}
 
 jobs:
   writer:
+    name: Agent 2 — Writer
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-      - name: Install dependencies
-        run: pip install -r automations/content/requirements.txt
-      - name: Run Writer
-        env:
-          SUPABASE_URL:         ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENAI_API_KEY:       ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY:    ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python automations/content/write_post.py
 
-  publisher:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: writer
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.11"
+
       - name: Install dependencies
         run: pip install -r automations/content/requirements.txt
-      - name: Run Publisher
-        env:
-          SUPABASE_URL:          ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY:  ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          OPENAI_API_KEY:        ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
-          BREVO_API_KEY:         ${{ secrets.BREVO_API_KEY }}
-          X_API_KEY:             ${{ secrets.X_API_KEY }}
-          X_API_SECRET:          ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN:        ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_SECRET:       ${{ secrets.X_ACCESS_SECRET }}
-        run: python automations/content/publish_post.py
+
+      - name: Run Writer
+        run: python automations/content/write_post.py
