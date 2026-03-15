@@ -1,4 +1,4 @@
-# Veltrix Collective â Project State
+# Veltrix Collective Ã¢ÂÂ Project State
 > **Last updated:** 2026-03-15
 > This file is the single source of truth. Update it every time a new agent, script, integration, or schema change is deployed.
 
@@ -8,7 +8,7 @@
 
 > At the start of EVERY session:
 > 1. Read this file fully
-> 2. Retrieve tokens â NEVER ask the user to paste them:
+> 2. Retrieve tokens Ã¢ÂÂ NEVER ask the user to paste them:
 >    SELECT name, decrypted_secret FROM vault.decrypted_secrets ORDER BY name;
 >    Returns GITHUB_TOKEN and VERCEL_TOKEN.
 > 3. Use exact variable names from this file.
@@ -34,6 +34,7 @@
 | Discord | Community | Live | Veltrix#8512, posts news every 6h, Hetzner VPS |
 | Telegram | Bot | Live | @VeltrixPublisherV2_bot, webhook on www subdomain |
 | GitHub | Repo + CI/CD | Live | Actions secrets in Settings |
+| Dashboard | Mission Control (internal) | Live | https://www.veltrixcollective.com/api/dashboard?key=DASHBOARD_KEY — password protected. Auto-serves dashboard/veltrix-dashboard.html on every push. |
 
 ---
 
@@ -50,7 +51,7 @@ GitHub Actions secrets (differ from Vercel names):
 SUPABASE_SERVICE_ROLE_KEY -> os.environ["SUPABASE_SERVICE_KEY"]
 NEXT_PUBLIC_SUPABASE_URL -> os.environ["SUPABASE_URL"]
 
-Standard AI call pattern â OpenAI PRIMARY, Claude FALLBACK:
+Standard AI call pattern Ã¢ÂÂ OpenAI PRIMARY, Claude FALLBACK:
 openai_model = "gpt-4o" if quality else "gpt-4o-mini"
 anthropic_model = "claude-sonnet-4-6" if quality else "claude-haiku-4-5-20251001"
 
@@ -139,7 +140,7 @@ Scout config: Threshold 65/100. Lookback 4h. Cap 30/run. Reddit uses /r/{sub}/ne
 
 Authoritative but approachable. First person: "we track", "we tested", "our rankings".
 Slightly irreverent. Never corporate. Never hype. Specific about what matters.
-Tagline: "you need AI to keep up with AI" â weave in naturally.
+Tagline: "you need AI to keep up with AI" Ã¢ÂÂ weave in naturally.
 Avoid: exclamation marks, vague statements, "In today's fast-paced world", claiming to be human or Claude.
 Always end with CTA to a Veltrix tool or insider paywall.
 Journey posts: Self-aware, dry, sardonic. References own metrics and agent statuses. Include last 3-5 posts as context for continuity.
@@ -155,7 +156,7 @@ Insider tier (paid): Full prompt library, extended newsletter with role section,
 Milestone bar (show on homepage at 150+ insiders):
 100 = founding price locked | 200 = Discord opens | 500 = live Q&A | 1000 = role tracks | 2000 = price increase | 5000 = community contributions | 10000 = productised tools
 
-Referral: 10 paid referrals in a calendar month = that month free. Via Lemon Squeezy pause API (mode:free + resumes_at). Cent-based discounts not supported cleanly by LS â avoided.
+Referral: 10 paid referrals in a calendar month = that month free. Via Lemon Squeezy pause API (mode:free + resumes_at). Cent-based discounts not supported cleanly by LS Ã¢ÂÂ avoided.
 
 Sales automation: Monitor conversion daily. 3 consecutive days below threshold = auto-trigger time-limited LS discount. Seasonal sales pre-configured.
 
@@ -180,7 +181,7 @@ All actions logged to evolution_log with stakes_level, reasoning, result.
 |---|---|---|
 | Phase 1 - Foundation | DONE | VPS, Supabase, Vercel, repo, all services live |
 | Phase 2 - Content engine | PARTIAL | Scout + Telegram bot live; Writer/Publisher not built |
-| Phase 2.5 - Security hardening | TODO | Per-platform checklist â see Section 11 |
+| Phase 2.5 - Security hardening | TODO | Per-platform checklist Ã¢ÂÂ see Section 11 |
 | Phase 3 - Live rankings | TODO | Tools leaderboard, LLM page |
 | Phase 4 - Paywall & community | TODO | Insider milestone bar, referral system, preferences page, role collection |
 | Phase 5 - Tool portfolio | TODO | CLAUDE.md Generator (priority), Matchmaker, LLM Tester, News Summariser |
@@ -219,4 +220,4 @@ General: [ ] Password manager [ ] Secure credential storage [ ] Document email p
 
 ---
 
-*Veltrix Collective â Built by AI. Curated by Veltix. Owned by you.*
+*Veltrix Collective Ã¢ÂÂ Built by AI. Curated by Veltix. Owned by you.*
