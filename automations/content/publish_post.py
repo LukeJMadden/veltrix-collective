@@ -8,7 +8,8 @@ posts to @Veltrix_C via Composio REST API, logs to social_posts table.
 Verified working endpoint (2026-03-16):
   POST https://backend.composio.dev/api/v2/actions/TWITTER_CREATION_OF_A_POST/execute
   Headers: x-api-key, Content-Type: application/json
-  Body: {"appName": "twitter", "entityId": "default", "input": {"text": "..."}}
+  Body: {"appName": "twitter", "entityId": "pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5",
+         "input": {"text": "..."}}
   Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 """
 
@@ -29,11 +30,12 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-SUPABASE_URL  = os.environ["SUPABASE_URL"]
-SUPABASE_KEY  = os.environ["SUPABASE_SERVICE_KEY"]
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
-COMPOSIO_KEY  = os.environ["COMPOSIO_API_KEY"]
-SITE_URL      = "https://veltrixcollective.com"
+SUPABASE_URL    = os.environ["SUPABASE_URL"]
+SUPABASE_KEY    = os.environ["SUPABASE_SERVICE_KEY"]
+ANTHROPIC_KEY   = os.environ["ANTHROPIC_API_KEY"]
+COMPOSIO_KEY    = os.environ["COMPOSIO_API_KEY"]
+COMPOSIO_ENTITY = "pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5"
+SITE_URL        = "https://veltrixcollective.com"
 
 SUPABASE_HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -134,7 +136,7 @@ def post_tweet(text: str, reply_to_id: str | None = None) -> str:
         headers=COMPOSIO_HEADERS,
         json={
             "appName": "twitter",
-            "entityId": "default",
+            "entityId": COMPOSIO_ENTITY,
             "input": tool_input,
         },
     )
