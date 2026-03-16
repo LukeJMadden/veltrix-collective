@@ -32,23 +32,27 @@
 **Connected accounts (active):**
 - GitHub ✅
 - Supabase ×2 ✅
-- Twitter (@Veltrix_C) ✅ — reconnected 2026-03-16
+- Twitter (@Veltrix_C) ✅ — connected 2026-03-16
 
 ### Twitter developer app — DO NOT CHANGE THESE SETTINGS
 - App name: `2032611033354055680VeltrixBot`
 - **App type: Web App, Automated App or Bot** (Confidential client) ← must stay this
 - **Permissions: Read and Write** ← must stay this
 - Callback URL: `https://backend.composio.dev/api/v1/auth-apps/add`
-- Developer account: `2032611033354055680`
 - Credits: paid/active as of 2026-03-16
 
-### Composio REST API — verified working endpoint
+### Composio REST API — verified working endpoint (2026-03-16)
 ```
-POST https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute
+POST https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute
 Headers: x-api-key: {COMPOSIO_API_KEY}, Content-Type: application/json
 Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}}
 Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 ```
+
+**Endpoint history (do not use these):**
+- `/api/v1/actions/` — returns 410 Gone (deprecated)
+- `/api/v3/tools/` — returns 404 (wrong path)
+- `/api/v3/actions/` — ✅ CORRECT
 
 ### CRITICAL: Composio SDK is broken — never use it
 The `composio` Python package's `tools.execute()` signature changes every version.
@@ -117,11 +121,6 @@ def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
 - Public INSERT: `tool_votes`
 - Private (no anon policy): `automation_logs`, `discord_logs`, `goal_checkins`, `referrals`, `social_posts`, `support_logs`
 
-**Key functions:**
-- `increment_tool_votes(p_tool_id integer)`
-- `increment_referral_count(referrer_code text)`
-- `get_composio_api_key()` — reads COMPOSIO_API_KEY from vault
-
 ---
 
 ## 5. Agent Pipeline
@@ -133,11 +132,10 @@ def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
 | **Agent 3: Publisher** | ✅ LIVE | automations/content/publish_post.py | Daily 5am UTC (daily.yml) |
 | **Agent 4: Discord Bot** | ✅ LIVE | Hetzner VPS | Continuous WebSocket |
 
-**Scout:** RSS + Reddit RSS + HN. Scores with OpenAI. Deduplicates by url_hash. Saves to `news` table.
-
-**Writer:** Picks top unwritten news story. Writes full SEO post via OpenAI. Saves to `posts` table with slug, excerpt, meta fields. Status: `published`.
-
-**Publisher:** Finds latest published post with no Twitter entry in `social_posts`. Generates 3-tweet thread via OpenAI. Posts to @Veltrix_C via Composio REST API. Logs tweet IDs to `social_posts`.
+### Manual dispatch inputs (daily.yml)
+- `run_writer: true` — runs Writer only
+- `run_publisher: true` — runs Publisher only
+- Both false (default) — nothing runs (schedule triggers are automatic)
 
 ### Publisher — exact working Composio call
 ```python
@@ -148,7 +146,7 @@ def post_tweet(text: str, reply_to_id: str | None = None) -> str:
     if reply_to_id:
         tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
     resp = requests.post(
-        "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
+        "https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute",
         headers=COMPOSIO_HEADERS,
         json={"entityId": "default", "input": tool_input},
     )
@@ -160,10 +158,10 @@ def post_tweet(text: str, reply_to_id: str | None = None) -> str:
 
 ---
 
-## 6. Site — subscribe/page.tsx
+## 6. Site
 
-4-step signup flow: name → email + gender → location → goals.
-API: `site/app/api/subscribe/route.js` — writes to `users` table, syncs to Brevo.
+4-step signup: `site/app/subscribe/page.tsx` + `site/app/api/subscribe/route.js`
+Writes to `users` table, syncs to Brevo.
 
 ---
 
@@ -183,6 +181,7 @@ veltrix-collective/
 ├── .github/workflows/
 │   ├── scout.yml                        Every 3h
 │   └── daily.yml                        Writer 2am + Publisher 5am UTC
+│                                        Manual: run_writer=true / run_publisher=true
 └── PROJECT_STATE.md                     This file
 ```
 
@@ -191,9 +190,9 @@ veltrix-collective/
 ## 8. Known Gotchas
 
 1. **Composio SDK (`composio` pip package) is unusable** — `tools.execute()` breaks every version. Use REST API only. Never add `composio` to requirements.txt.
-2. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
-3. **Composio MCP requires full restart** (quit + reopen Claude Desktop) after any Connected Account change.
-4. **workflow_dispatch without inputs** runs both Writer and Publisher. The `job` input (`writer`/`publisher`) controls which one runs when triggering manually.
-5. **Re-running a failed job** uses the old commit's code — always trigger a fresh dispatch on main for latest fixes.
-6. **social_posts table has no anon INSERT policy** — Publisher uses the service key via SUPABASE_SERVICE_KEY env var, which is correct.
+2. **Composio endpoint history:** v1 = 410 Gone, v3/tools/ = 404, **v3/actions/ = correct**.
+3. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
+4. **Composio MCP requires full restart** (quit + reopen Claude Desktop) after any Connected Account change.
+5. **daily.yml manual dispatch:** use `run_publisher: true` input to trigger Publisher only. Plain dispatch runs nothing (scheduled triggers are automatic).
+6. **Re-running a failed job** uses the old commit's code — always trigger a fresh dispatch for latest fixes.
 7. **Twitter credits reset monthly** from app creation date. Current plan: paid/active.
