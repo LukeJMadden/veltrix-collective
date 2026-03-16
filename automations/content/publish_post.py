@@ -3,16 +3,15 @@
 Agent 3: Publisher
 Runs daily at 5am UTC via GitHub Actions.
 Finds latest published post, generates 3-tweet thread,
-posts to @Veltrix_C via Composio, logs to social_posts table.
+posts to @Veltrix_C via Composio REST API, logs to social_posts table.
 
-Composio API ref (verified working):
-  POST https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute
+Verified working endpoint (2026-03-16):
+  POST https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute
   Headers: x-api-key, Content-Type: application/json
   Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}}
   Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 
-Note: Requires Twitter Basic tier ($100/mo) for write access.
-Free tier returns 402 CreditsDepleted.
+Note: v1 endpoint returns 410 Gone. v3/tools/ returns 404. v3/actions/ is correct.
 """
 
 import os
@@ -127,13 +126,13 @@ Example: ["Tweet 1", "Tweet 2", "Tweet 3"]"""
 
 
 def post_tweet(text: str, reply_to_id: str | None = None) -> str:
-    """Post a single tweet via Composio v1 actions API. Returns tweet ID."""
+    """Post a single tweet via Composio v3 actions API. Returns tweet ID."""
     tool_input: dict = {"text": text}
     if reply_to_id:
         tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
 
     resp = requests.post(
-        "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
+        "https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute",
         headers=COMPOSIO_HEADERS,
         json={"entityId": "default", "input": tool_input},
     )
