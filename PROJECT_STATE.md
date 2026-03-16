@@ -54,16 +54,14 @@ Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 ```
 
 ### Endpoint history (do not use these)
-- `/api/v1/actions/` — 410 Gone (deprecated)
-- `/api/v3/tools/` — 404 (wrong path)
-- `/api/v3/actions/` — 404 (wrong path)
-- `/api/v2/actions/` + `entityId: "default"` — 400 (wrong entity)
+- `/api/v1/actions/` — 410 Gone
+- `/api/v3/tools/` — 404
+- `/api/v3/actions/` — 404
+- `/api/v2/actions/` + `entityId: "default"` — 400 wrong entity
 - **`/api/v2/actions/` + correct entityId — ✅ WORKS**
 
 ### CRITICAL: Composio SDK is broken — never use it
-The `composio` Python package's `tools.execute()` breaks every version.
-`requirements.txt` must only contain: `openai`, `anthropic`, `requests`.
-Always call the REST API directly.
+`requirements.txt` must only contain: `openai`, `anthropic`, `requests`. Never add `composio`.
 
 ---
 
@@ -193,7 +191,7 @@ veltrix-collective/
 
 ## 8. Known Gotchas
 
-1. **Composio SDK is unusable** — use REST API only, never add `composio` to requirements.txt.
+1. **Composio SDK unusable** — use REST API only, never add `composio` to requirements.txt.
 2. **Composio entity ID is NOT "default"** — must use `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`.
 3. **Composio endpoint:** `/api/v2/actions/{slug}/execute` with `appName` + `entityId` in body.
 4. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
@@ -201,3 +199,22 @@ veltrix-collective/
 6. **daily.yml manual dispatch:** use `run_publisher: true` to trigger Publisher only.
 7. **Re-running a failed job** uses old commit code — always dispatch fresh for latest fixes.
 8. **Twitter credits reset monthly** — current plan paid/active.
+
+---
+
+## 9. Next Up
+
+### Immediate
+- [ ] Subscribe page end-to-end test (page is live, API is fixed — needs a real form submission test)
+- [ ] Verify social_posts table is logging threads correctly after first successful Publisher run
+
+### Short term
+- [ ] Agent 5: Email newsletter — weekly digest of top posts sent to Brevo list
+- [ ] Blog page on site — display posts from Supabase with SSR
+- [ ] Tools page — display tools table with voting
+- [ ] LLM rankings page — display llm_rankings table
+
+### Medium term
+- [ ] Paywall — Lemon Squeezy checkout → activate member → Discord invite
+- [ ] Referral system — referral_code tracking, rewards
+- [ ] Goal check-in system — weekly email to users asking about their AI goals
