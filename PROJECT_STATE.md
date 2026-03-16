@@ -1,72 +1,48 @@
 # Veltrix Collective — Project State
 > **Last updated:** 2026-03-16
-> This file is the single source of truth for the project. Update it every time a new agent, script, integration, or schema change is deployed. Any AI session can read this file to get full context before building anything.
+> Single source of truth. Read this at the start of every session before touching anything.
 
 ---
 
 ## 1. Services & Credentials
 
-### Hosting & Infrastructure
 | Service | Purpose | Status | Key Details |
 |---|---|---|---|
-| **Hetzner VPS** | Discord bot (Agent 4) — persistent process | Live | IP: 5.161.89.154 |
-| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main. Env vars in Vercel dashboard. |
-| **Namecheap** | Domain registrar | Live | veltrixcollective.com — DNS points to Vercel |
-
-### AI & APIs
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **OpenAI** | PRIMARY AI — all writing, content, scoring | Active | Use until ~$100 credits exhausted |
-| **Anthropic (Claude)** | FALLBACK AI | Active | Fallback when OpenAI unavailable |
-
-### Database
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Supabase** | Primary database | Live | Project ID: qftpohuyvshbvhwxmkvn, Region: ap-southeast-1 |
-
-### Email
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Brevo** | Transactional email + newsletters | Set up | Lists, sequences, API configured |
-| **Zoho** | Custom inbox | Live | hello@veltrixcollective.com |
-
-### Payments
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Lemon Squeezy** | Paywall + subscriptions | Set up | Webhook to /api/activate-member |
-
-### Community
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Discord** | Community hub | Live | Bot: Veltrix#8512. Posts news every 6h. Auto-restarts on Hetzner VPS. |
-
-### Social
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **Twitter / X** | @Veltrix_C daily thread | LIVE | Connected via Composio. App type: Web App/Bot (Confidential client). Read+Write. |
-
-### Source Control
-| Service | Purpose | Status | Key Details |
-|---|---|---|---|
-| **GitHub** | Repo + CI/CD | Live | Actions secrets in Settings -> Secrets -> Actions |
+| **Hetzner VPS** | Discord bot (Agent 4) | Live | IP: 5.161.89.154 |
+| **Vercel** | Next.js frontend | Live | Auto-deploys from GitHub main |
+| **Namecheap** | Domain | Live | veltrixcollective.com → Vercel |
+| **Supabase** | Primary database | Live | ID: qftpohuyvshbvhwxmkvn, ap-southeast-1 |
+| **OpenAI** | Primary AI | Active | gpt-4o (quality) / gpt-4o-mini (cheap) |
+| **Anthropic** | Fallback AI | Active | claude-sonnet-4-6 / claude-haiku-4-5-20251001 |
+| **Brevo** | Email + newsletters | Live | hello@veltrixcollective.com sender |
+| **Zoho** | Support inbox | Live | hello@veltrixcollective.com |
+| **Lemon Squeezy** | Payments | Set up | Webhook → /api/activate-member |
+| **Discord** | Community | Live | Bot: Veltrix#8512, Hetzner VPS |
+| **Twitter/X** | @Veltrix_C posting | **LIVE** | Via Composio. First tweet posted 2026-03-16. |
+| **GitHub** | Repo + CI/CD | Live | Actions secrets in repo Settings |
 
 ---
 
-## 2. Composio MCP
+## 2. Composio
 
 **MCP URL:** `https://backend.composio.dev/v3/mcp/c87e99ef-e4a5-4294-808b-58afb31531d7/mcp?user_id=pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
-**User ID:** `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
-**Connected accounts:** GitHub, Supabase ×2, Twitter (@Veltrix_C) ✅
-**COMPOSIO_API_KEY:** stored in GitHub Actions secrets
+**Entity / user_id:** `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
+**COMPOSIO_API_KEY:** in GitHub Actions secrets
 
-### Twitter app setup (IMPORTANT — do not change)
-- App name: 2032611033354055680VeltrixBot
-- App type: **Web App, Automated App or Bot** (Confidential client) ← must stay this way
-- Permissions: **Read and Write**
-- Callback URL: https://backend.composio.dev/api/v1/auth-apps/add
-- Connected account: @Veltrix_C OAuth via Composio Connected Accounts
+**Connected accounts (active):**
+- GitHub ✅
+- Supabase ×2 ✅
+- Twitter (@Veltrix_C) ✅ — reconnected 2026-03-16
 
-### Composio REST API (used by Publisher)
+### Twitter developer app — DO NOT CHANGE THESE SETTINGS
+- App name: `2032611033354055680VeltrixBot`
+- **App type: Web App, Automated App or Bot** (Confidential client) ← must stay this
+- **Permissions: Read and Write** ← must stay this
+- Callback URL: `https://backend.composio.dev/api/v1/auth-apps/add`
+- Developer account: `2032611033354055680`
+- Credits: paid/active as of 2026-03-16
+
+### Composio REST API — verified working endpoint
 ```
 POST https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute
 Headers: x-api-key: {COMPOSIO_API_KEY}, Content-Type: application/json
@@ -74,20 +50,24 @@ Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_
 Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 ```
 
+### CRITICAL: Composio SDK is broken — never use it
+The `composio` Python package's `tools.execute()` signature changes every version.
+`requirements.txt` must only contain: `openai`, `anthropic`, `requests`.
+Always call the REST API directly.
+
 ---
 
-## 3. Environment Variables
+## 3. GitHub Actions Secrets
 
-### GitHub Actions Secrets
-| Secret Name | Python env key | Purpose |
+| Secret name | Python key | Purpose |
 |---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | os.environ["SUPABASE_URL"] | Supabase URL |
+| SUPABASE_SERVICE_ROLE_KEY | os.environ["SUPABASE_SERVICE_KEY"] | Supabase writes |
 | ANTHROPIC_API_KEY | os.environ["ANTHROPIC_API_KEY"] | Claude fallback |
 | OPENAI_API_KEY | os.environ["OPENAI_API_KEY"] | OpenAI primary |
 | BREVO_API_KEY | os.environ["BREVO_API_KEY"] | Brevo email |
-| LEMON_SQUEEZY_API_KEY | os.environ["LEMON_SQUEEZY_API_KEY"] | Lemon Squeezy |
+| LEMON_SQUEEZY_API_KEY | os.environ["LEMON_SQUEEZY_API_KEY"] | Payments |
 | LEMON_SQUEEZY_WEBHOOK_SECRET | os.environ["LEMON_SQUEEZY_WEBHOOK_SECRET"] | Webhook verify |
-| NEXT_PUBLIC_SUPABASE_URL | os.environ["SUPABASE_URL"] | Supabase URL |
-| SUPABASE_SERVICE_ROLE_KEY | os.environ["SUPABASE_SERVICE_KEY"] | Supabase writes |
 | COMPOSIO_API_KEY | os.environ["COMPOSIO_API_KEY"] | Composio REST API |
 
 ### Standard .yml env block
@@ -100,7 +80,7 @@ env:
   COMPOSIO_API_KEY:             ${{ secrets.COMPOSIO_API_KEY }}
 ```
 
-### Standard AI call pattern — OpenAI PRIMARY, Claude FALLBACK
+### Standard AI call (OpenAI primary, Claude fallback)
 ```python
 import openai, anthropic, logging, os
 log = logging.getLogger(__name__)
@@ -129,58 +109,91 @@ def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
 
 ## 4. Supabase
 
-**Project ID:** qftpohuyvshbvhwxmkvn
-**Region:** ap-southeast-1
+**Project ID:** qftpohuyvshbvhwxmkvn | **Region:** ap-southeast-1 | **Postgres:** 17.6
 
 **RLS:** All tables enabled.
-Public INSERT: users (anon signup)
-Public READ: news, posts (published only), tools, llm_rankings, tool_comparisons, products, faq_items, newsletters
-Private: automation_logs, discord_logs, goal_checkins, referrals, social_posts, support_logs
+- Public INSERT: `users` (anon signup)
+- Public READ: `news`, `posts` (published only), `tools`, `llm_rankings`, `tool_comparisons`, `products`, `faq_items`, `newsletters`
+- Public INSERT: `tool_votes`
+- Private (no anon policy): `automation_logs`, `discord_logs`, `goal_checkins`, `referrals`, `social_posts`, `support_logs`
+
+**Key functions:**
+- `increment_tool_votes(p_tool_id integer)`
+- `increment_referral_count(referrer_code text)`
+- `get_composio_api_key()` — reads COMPOSIO_API_KEY from vault
 
 ---
 
 ## 5. Agent Pipeline
 
-| Agent | Status | Script | Trigger | Notes |
-|---|---|---|---|---|
-| Agent 1: Scout | LIVE | automations/news/scout.py | Every 3h (scout.yml) | RSS + Reddit + HN. Scores with OpenAI. Saves to news table. |
-| Agent 2: Writer | LIVE | automations/content/write_post.py | Daily 2am UTC (daily.yml) | Writes full SEO posts from top news. Saves to posts table. |
-| Agent 3: Publisher | LIVE | automations/content/publish_post.py | Daily 5am UTC (daily.yml) | Generates 3-tweet thread via OpenAI. Posts via Composio v1 REST API. |
-| Agent 4: Discord Bot | LIVE | Hetzner VPS | Continuous WebSocket | Posts news every 6h to Discord. |
+| Agent | Status | Script | Trigger |
+|---|---|---|---|
+| **Agent 1: Scout** | ✅ LIVE | automations/news/scout.py | Every 3h (scout.yml) |
+| **Agent 2: Writer** | ✅ LIVE | automations/content/write_post.py | Daily 2am UTC (daily.yml) |
+| **Agent 3: Publisher** | ✅ LIVE | automations/content/publish_post.py | Daily 5am UTC (daily.yml) |
+| **Agent 4: Discord Bot** | ✅ LIVE | Hetzner VPS | Continuous WebSocket |
 
-### Publisher — verified working Composio call
+**Scout:** RSS + Reddit RSS + HN. Scores with OpenAI. Deduplicates by url_hash. Saves to `news` table.
+
+**Writer:** Picks top unwritten news story. Writes full SEO post via OpenAI. Saves to `posts` table with slug, excerpt, meta fields. Status: `published`.
+
+**Publisher:** Finds latest published post with no Twitter entry in `social_posts`. Generates 3-tweet thread via OpenAI. Posts to @Veltrix_C via Composio REST API. Logs tweet IDs to `social_posts`.
+
+### Publisher — exact working Composio call
 ```python
-resp = requests.post(
-    "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
-    headers={"x-api-key": COMPOSIO_KEY, "Content-Type": "application/json"},
-    json={"entityId": "default", "input": {"text": text, "reply_in_reply_to_tweet_id": reply_id}},
-)
+COMPOSIO_HEADERS = {"x-api-key": COMPOSIO_KEY, "Content-Type": "application/json"}
+
+def post_tweet(text: str, reply_to_id: str | None = None) -> str:
+    tool_input = {"text": text}
+    if reply_to_id:
+        tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
+    resp = requests.post(
+        "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
+        headers=COMPOSIO_HEADERS,
+        json={"entityId": "default", "input": tool_input},
+    )
+    data = resp.json()
+    if not data.get("successfull"):
+        raise RuntimeError(f"Tweet failed: {data.get('error')}")
+    return data["data"]["data"]["id"]
 ```
 
 ---
 
-## 6. Repo Structure
+## 6. Site — subscribe/page.tsx
+
+4-step signup flow: name → email + gender → location → goals.
+API: `site/app/api/subscribe/route.js` — writes to `users` table, syncs to Brevo.
+
+---
+
+## 7. Repo Structure
 
 ```
 veltrix-collective/
-├── site/app/subscribe/page.tsx          LIVE (4-step signup)
-├── site/app/api/subscribe/route.js      LIVE
-├── automations/content/
-│   ├── write_post.py                    LIVE (Agent 2)
-│   ├── publish_post.py                  LIVE (Agent 3)
-│   └── requirements.txt                 openai, anthropic, requests
-├── automations/news/scout.py            LIVE (Agent 1)
+├── site/
+│   ├── app/subscribe/page.tsx           LIVE
+│   └── app/api/subscribe/route.js       LIVE
+├── automations/
+│   ├── news/scout.py                    LIVE (Agent 1)
+│   └── content/
+│       ├── write_post.py                LIVE (Agent 2)
+│       ├── publish_post.py              LIVE (Agent 3)
+│       └── requirements.txt             openai, anthropic, requests ONLY
 ├── .github/workflows/
-│   ├── scout.yml                        LIVE (every 3h)
-│   └── daily.yml                        LIVE (writer 2am + publisher 5am UTC)
-└── PROJECT_STATE.md                     this file
+│   ├── scout.yml                        Every 3h
+│   └── daily.yml                        Writer 2am + Publisher 5am UTC
+└── PROJECT_STATE.md                     This file
 ```
 
 ---
 
-## 7. Known Issues / Gotchas
+## 8. Known Gotchas
 
-- **Composio SDK unusable** — `tools.execute()` signature changes between versions. Always use the REST API directly (`/api/v1/actions/{slug}/execute`). Never use the composio Python package.
-- **Twitter app type must stay as "Web App, Automated App or Bot"** — switching back to Native App breaks write access.
-- **MCP session must be restarted** after changing Composio connected accounts.
-- **requirements.txt** only needs: openai, anthropic, requests — no composio package.
+1. **Composio SDK (`composio` pip package) is unusable** — `tools.execute()` breaks every version. Use REST API only. Never add `composio` to requirements.txt.
+2. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
+3. **Composio MCP requires full restart** (quit + reopen Claude Desktop) after any Connected Account change.
+4. **workflow_dispatch without inputs** runs both Writer and Publisher. The `job` input (`writer`/`publisher`) controls which one runs when triggering manually.
+5. **Re-running a failed job** uses the old commit's code — always trigger a fresh dispatch on main for latest fixes.
+6. **social_posts table has no anon INSERT policy** — Publisher uses the service key via SUPABASE_SERVICE_KEY env var, which is correct.
+7. **Twitter credits reset monthly** from app creation date. Current plan: paid/active.
