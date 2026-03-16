@@ -5,13 +5,11 @@ Runs daily at 5am UTC via GitHub Actions.
 Finds latest published post, generates 3-tweet thread,
 posts to @Veltrix_C via Composio REST API, logs to social_posts table.
 
-Verified working endpoint (2026-03-16):
-  POST https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute
-  Headers: x-api-key, Content-Type: application/json
-  Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}}
-  Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
-
-Note: v1 endpoint returns 410 Gone. v3/tools/ returns 404. v3/actions/ is correct.
+Endpoint history:
+  v1/actions/ -> 410 Gone
+  v3/tools/   -> 404
+  v3/actions/ -> 404
+  v2/actions/ -> testing
 """
 
 import os
@@ -126,24 +124,39 @@ Example: ["Tweet 1", "Tweet 2", "Tweet 3"]"""
 
 
 def post_tweet(text: str, reply_to_id: str | None = None) -> str:
-    """Post a single tweet via Composio v3 actions API. Returns tweet ID."""
+    """Post a single tweet via Composio. Returns tweet ID."""
     tool_input: dict = {"text": text}
     if reply_to_id:
         tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
 
-    resp = requests.post(
-        "https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute",
-        headers=COMPOSIO_HEADERS,
-        json={"entityId": "default", "input": tool_input},
-    )
+    # Try each known endpoint in order
+    endpoints = [
+        "https://backend.composio.dev/api/v2/actions/TWITTER_CREATION_OF_A_POST/execute",
+        "https://backend.composio.dev/api/v3/actions/execute/TWITTER_CREATION_OF_A_POST",
+        "https://backend.composio.dev/api/v1/actions/TWITTER_CREATION_OF_A_POST/execute",
+    ]
 
-    log.info(f"Composio HTTP {resp.status_code}")
-    data = resp.json()
+    payload = {"entityId": "default", "input": tool_input}
 
-    if not data.get("successfull", False):
-        raise RuntimeError(f"Tweet failed: {data.get('error', data)}")
+    for endpoint in endpoints:
+        resp = requests.post(endpoint, headers=COMPOSIO_HEADERS, json=payload)
+        log.info(f"Tried {endpoint} -> HTTP {resp.status_code}")
 
-    return data["data"]["data"]["id"]
+        if resp.status_code in (404, 410) or not resp.text.strip():
+            continue
+
+        try:
+            data = resp.json()
+        except Exception:
+            log.warning(f"Non-JSON response from {endpoint}: {resp.text[:200]}")
+            continue
+
+        if data.get("successfull", False):
+            return data["data"]["data"]["id"]
+
+        log.warning(f"Endpoint {endpoint} returned error: {data.get('error', data)}")
+
+    raise RuntimeError("All Composio endpoints failed. Check logs above for HTTP status codes.")
 
 
 def post_thread(tweets: list[str]) -> list[str]:
