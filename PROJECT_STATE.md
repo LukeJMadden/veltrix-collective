@@ -18,7 +18,7 @@
 | **Zoho** | Support inbox | Live | hello@veltrixcollective.com |
 | **Lemon Squeezy** | Payments | Set up | Webhook → /api/activate-member |
 | **Discord** | Community | Live | Bot: Veltrix#8512, Hetzner VPS |
-| **Twitter/X** | @Veltrix_C posting | **LIVE** | Via Composio. First tweet posted 2026-03-16. |
+| **Twitter/X** | @Veltrix_C posting | **LIVE** | Via Composio. First thread posted 2026-03-16. |
 | **GitHub** | Repo + CI/CD | Live | Actions secrets in repo Settings |
 
 ---
@@ -26,7 +26,7 @@
 ## 2. Composio
 
 **MCP URL:** `https://backend.composio.dev/v3/mcp/c87e99ef-e4a5-4294-808b-58afb31531d7/mcp?user_id=pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
-**Entity / user_id:** `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
+**Entity ID:** `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`
 **COMPOSIO_API_KEY:** in GitHub Actions secrets
 
 **Connected accounts (active):**
@@ -41,21 +41,27 @@
 - Callback URL: `https://backend.composio.dev/api/v1/auth-apps/add`
 - Credits: paid/active as of 2026-03-16
 
-### Composio REST API — verified working endpoint (2026-03-16)
+### Composio REST API — VERIFIED WORKING (2026-03-16)
 ```
-POST https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute
+POST https://backend.composio.dev/api/v2/actions/TWITTER_CREATION_OF_A_POST/execute
 Headers: x-api-key: {COMPOSIO_API_KEY}, Content-Type: application/json
-Body: {"entityId": "default", "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}}
+Body: {
+  "appName": "twitter",
+  "entityId": "pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5",
+  "input": {"text": "...", "reply_in_reply_to_tweet_id": "..."}
+}
 Response: {"successfull": true, "data": {"data": {"id": "tweet_id"}}}
 ```
 
-**Endpoint history (do not use these):**
-- `/api/v1/actions/` — returns 410 Gone (deprecated)
-- `/api/v3/tools/` — returns 404 (wrong path)
-- `/api/v3/actions/` — ✅ CORRECT
+### Endpoint history (do not use these)
+- `/api/v1/actions/` — 410 Gone (deprecated)
+- `/api/v3/tools/` — 404 (wrong path)
+- `/api/v3/actions/` — 404 (wrong path)
+- `/api/v2/actions/` + `entityId: "default"` — 400 (wrong entity)
+- **`/api/v2/actions/` + correct entityId — ✅ WORKS**
 
 ### CRITICAL: Composio SDK is broken — never use it
-The `composio` Python package's `tools.execute()` signature changes every version.
+The `composio` Python package's `tools.execute()` breaks every version.
 `requirements.txt` must only contain: `openai`, `anthropic`, `requests`.
 Always call the REST API directly.
 
@@ -119,7 +125,7 @@ def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
 - Public INSERT: `users` (anon signup)
 - Public READ: `news`, `posts` (published only), `tools`, `llm_rankings`, `tool_comparisons`, `products`, `faq_items`, `newsletters`
 - Public INSERT: `tool_votes`
-- Private (no anon policy): `automation_logs`, `discord_logs`, `goal_checkins`, `referrals`, `social_posts`, `support_logs`
+- Private: `automation_logs`, `discord_logs`, `goal_checkins`, `referrals`, `social_posts`, `support_logs`
 
 ---
 
@@ -132,23 +138,22 @@ def call_ai(prompt: str, max_tokens: int = 1000, quality: bool = False) -> str:
 | **Agent 3: Publisher** | ✅ LIVE | automations/content/publish_post.py | Daily 5am UTC (daily.yml) |
 | **Agent 4: Discord Bot** | ✅ LIVE | Hetzner VPS | Continuous WebSocket |
 
-### Manual dispatch inputs (daily.yml)
-- `run_writer: true` — runs Writer only
-- `run_publisher: true` — runs Publisher only
-- Both false (default) — nothing runs (schedule triggers are automatic)
+### Manual dispatch (daily.yml)
+- `run_writer: true` — triggers Writer only
+- `run_publisher: true` — triggers Publisher only
 
-### Publisher — exact working Composio call
+### Publisher — exact working code
 ```python
-COMPOSIO_HEADERS = {"x-api-key": COMPOSIO_KEY, "Content-Type": "application/json"}
+COMPOSIO_ENTITY = "pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5"
 
-def post_tweet(text: str, reply_to_id: str | None = None) -> str:
+def post_tweet(text, reply_to_id=None):
     tool_input = {"text": text}
     if reply_to_id:
         tool_input["reply_in_reply_to_tweet_id"] = reply_to_id
     resp = requests.post(
-        "https://backend.composio.dev/api/v3/actions/TWITTER_CREATION_OF_A_POST/execute",
-        headers=COMPOSIO_HEADERS,
-        json={"entityId": "default", "input": tool_input},
+        "https://backend.composio.dev/api/v2/actions/TWITTER_CREATION_OF_A_POST/execute",
+        headers={"x-api-key": COMPOSIO_KEY, "Content-Type": "application/json"},
+        json={"appName": "twitter", "entityId": COMPOSIO_ENTITY, "input": tool_input},
     )
     data = resp.json()
     if not data.get("successfull"):
@@ -181,7 +186,6 @@ veltrix-collective/
 ├── .github/workflows/
 │   ├── scout.yml                        Every 3h
 │   └── daily.yml                        Writer 2am + Publisher 5am UTC
-│                                        Manual: run_writer=true / run_publisher=true
 └── PROJECT_STATE.md                     This file
 ```
 
@@ -189,10 +193,11 @@ veltrix-collective/
 
 ## 8. Known Gotchas
 
-1. **Composio SDK (`composio` pip package) is unusable** — `tools.execute()` breaks every version. Use REST API only. Never add `composio` to requirements.txt.
-2. **Composio endpoint history:** v1 = 410 Gone, v3/tools/ = 404, **v3/actions/ = correct**.
-3. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
-4. **Composio MCP requires full restart** (quit + reopen Claude Desktop) after any Connected Account change.
-5. **daily.yml manual dispatch:** use `run_publisher: true` input to trigger Publisher only. Plain dispatch runs nothing (scheduled triggers are automatic).
-6. **Re-running a failed job** uses the old commit's code — always trigger a fresh dispatch for latest fixes.
-7. **Twitter credits reset monthly** from app creation date. Current plan: paid/active.
+1. **Composio SDK is unusable** — use REST API only, never add `composio` to requirements.txt.
+2. **Composio entity ID is NOT "default"** — must use `pg-test-cab455b4-3482-4a0e-a206-e14fda773ff5`.
+3. **Composio endpoint:** `/api/v2/actions/{slug}/execute` with `appName` + `entityId` in body.
+4. **Twitter app type must stay "Web App, Automated App or Bot"** — Native App breaks write access.
+5. **Composio MCP requires full restart** after any Connected Account change.
+6. **daily.yml manual dispatch:** use `run_publisher: true` to trigger Publisher only.
+7. **Re-running a failed job** uses old commit code — always dispatch fresh for latest fixes.
+8. **Twitter credits reset monthly** — current plan paid/active.
